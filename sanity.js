@@ -67,3 +67,78 @@ const locations = create("div","locations",null,nav);
 	let span = create("span",["location","ilink"],location.name,locations);
 	span.onclick = location.action
 })
+
+let aniCast = {postMessage: function(){}};//dummy object for Safari
+if(window.BroadcastChannel){
+	aniCast = new BroadcastChannel("sanity");
+	aniCast.onmessage = function(message){
+	}
+}
+else{
+	/* Safari is the most common case where BroadcastChannel is not available.
+	 * It *should* be available in most other browsers, so if it isn't here's a message to those where it fails
+	 * Safari users can't really do anything about it, so there's no need to nag them, hence the window.safari test
+	 * If Apple implements it in the future, the code should be updated, but the code doesn't do anything *wrong* then either
+	 * it will just not print the warning when BroadcastChannel isn't available
+	 */
+	if(!window.safari){
+		console.warn("BroadcastChannel not available. sAnity will not be able to share cached data between tabs")
+	}
+}
+
+const url = "https://graphql.anilist.co";//Current Anilist API location
+let handleResponse = function(response){
+	APIlimit = response.headers.get("x-ratelimit-limit");
+	return response.json().then(function(json){
+		return (response.ok ? json : Promise.reject(json))
+	})
+}
+
+function generalAPIcall(query,variables,callback,cache,fatalError){
+	let handleData = function(data){
+		callback(data,variables)
+	};
+	let options = {
+		method: "POST",
+		headers: {
+			"Content-Type": "application/json",
+			"Accept": "application/json"
+		},
+		body: JSON.stringify({
+			"query": query,
+			"variables": variables
+		})
+	};
+	let handleError = function(error){
+		console.error(error,variables);
+		handleData(null);
+		if(fatalError){
+			throw "fatal error"
+		}
+	};
+	fetch(url,options).then(handleResponse).then(handleData).catch(handleError)
+}
+
+generalAPIcall(
+	`
+query{
+	Page(perPage: 25){
+		activities(sort: ID_DESC,type: TEXT){
+			... on TextActivity{
+				text(asHtml: true)
+			}
+		}
+	}
+}
+	`,
+	{},
+	function(data){
+		if(!data){
+			return
+		}
+		data.data.Page.activities.forEach(activity => {
+			let item = create("div","post","",content);
+			item.innerHTML = activity.text;
+		})
+	}
+)
