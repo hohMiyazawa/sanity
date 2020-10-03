@@ -1,0 +1,52 @@
+body{
+	--color-blue: 61,180,242;
+	--color-green: 123,213,85;
+	margin: 0;
+	height: 100%;
+}
+.theme-dark{
+	--color-text: 169,183,199;
+	--max-contrast: 255,255,255;
+	--color-background: 11,22,34;
+	--color-base: 5,11,17;
+	--color-foreground: 21,31,46;
+}
+body{
+	background: rgb(var(--color-background));
+	color: rgb(var(--color-text))
+}
+#app{
+	margin: 0;
+	min-height: 100%;
+}
+#content{
+	margin-top: 50px;
+	margin-bottom: 100px;
+	height: 100%;
+	margin-left: 5%;
+	margin-right: 5%;
+}
+#nav{
+	text-align: center;
+	background: rgb(var(--color-base));
+	border-bottom: solid;
+	border-bottom-width: 1px;
+}
+#nav .locations{
+	display: flex;
+	justify-content: space-around;
+	max-width: 1000px;
+	text-align: center;
+	margin-left: auto;
+	margin-right: auto;
+}
+#nav .location{
+	margin: 5px;
+}
+.ilink{
+	cursor: pointer;
+}
+.ilink:hover{
+	color: rgb(var(--max-contrast));
+	box-shadow: 2px 2px 2px 1px rgba(0, 0, 0, 0.2);
+}

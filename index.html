@@ -5,10 +5,9 @@
 		<title>sAniy client</title>
 		<link rel="stylesheet" href="sanity.css"/>
 		<script src="config.js"></script>
-		<script src="sanity.js"></script>
 	</head>
 	<body class="theme-dark">
-		<div class="app">
+		<div id="app">
 			<noscript>
 				<p>The sAnity client requires javascript. It can not serve static pages since there's no server.</p>
 				<p>
@@ -16,15 +15,7 @@
 					<a href="https://enable-javascript.com/">How to enable javascript in your browser</a>
 				</p>
 			</noscript>
-			<nav id="nav">
-				<div class="locations">
-					<span>Social</span>
-					<span>Profile</span>
-					<span>List</span>
-					<span>Browse</span>
-					<span>Settings</span>
-				</div>
-			</nav>
+			<nav id="nav"></nav>
 			<div class="content" id="content">
 			</div>
 			<footer id="footer">
@@ -34,5 +25,6 @@
 				</div>
 			</footer>
 		</div>
+		<script src="sanity.js"></script>
 	</body>
 </html>
