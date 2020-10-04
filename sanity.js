@@ -119,13 +119,52 @@ function generalAPIcall(query,variables,callback,cache,fatalError){
 	fetch(url,options).then(handleResponse).then(handleData).catch(handleError)
 }
 
+showdown.setOption("strikethrough", true);
+showdown.setOption("ghMentions", true);
+showdown.setOption("emoji", true);
+showdown.setOption("ghMentionsLink", "https://anilist.co/user/{u}");
+const converter = new showdown.Converter();
+
+makeHtml = function(markdown){
+	markdown = markdown.replace("----","---");
+	let centerSplit = markdown.split("~~~");
+	let imgRegex = /img(\d+%?)?\(.+?\)/g;
+	centerSplit = centerSplit.map(component => {
+		let images = component.match(imgRegex);
+		if(images){
+
+			images.forEach(image => {
+				let imageParts = image.match(/^img(\d+%?)?\((.+?)\)$/);
+				component = component.replace(image,`<img width="${imageParts[1] || ""}" src="${imageParts[2]}">`)
+			})
+			return component
+		}
+		else{
+			return component
+		}
+	})
+	let preProcessed = [centerSplit[0]];
+	let openCenter = false;
+	for(let i=1;i<centerSplit.length;i++){
+		if(openCenter){
+			preProcessed.push("</center>");
+		}
+		else{
+			preProcessed.push("<center>");
+		}
+		preProcessed.push(centerSplit[i]);
+		openCenter = !openCenter
+	}
+	return converter.makeHtml(preProcessed.join(""))
+}
+
 generalAPIcall(
 	`
 query{
 	Page(perPage: 25){
 		activities(sort: ID_DESC,type: TEXT){
 			... on TextActivity{
-				text(asHtml: true)
+				text
 			}
 		}
 	}
@@ -138,7 +177,36 @@ query{
 		}
 		data.data.Page.activities.forEach(activity => {
 			let item = create("div","post","",content);
-			item.innerHTML = activity.text;
+			item.innerHTML = makeHtml(activity.text)
 		})
 	}
 )
+
+
+const activityCache = new Map();
+const activityCache_subsets = {
+	global: {
+		internal: [],
+		update: function(data){
+		},
+		update_following: function(data){
+		}
+	},
+	following: {
+		internal: [],
+		update: function(data){
+		},
+		update_global: function(data){
+		}
+	},
+	users: {
+		users: new Map(),
+		update: function(data){
+		}
+	}
+};
+
+
+
+
+

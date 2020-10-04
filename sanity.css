@@ -50,6 +50,12 @@ body{
 	color: rgb(var(--max-contrast));
 	box-shadow: 2px 2px 2px 1px rgba(0, 0, 0, 0.2);
 }
+.post{
+	background: rgb(var(--color-foreground));
+	padding: 10px;
+	margin: 15px;
+	border-radius: 5px;
+}
 .post img{
 	max-width: 400px;
 }
