@@ -13,7 +13,8 @@ body{
 }
 body{
 	background: rgb(var(--color-background));
-	color: rgb(var(--color-text))
+	color: rgb(var(--color-text));
+	overflow: hidden;
 }
 #app{
 	margin: 0;
@@ -75,4 +76,11 @@ body{
 }
 .post img{
 	max-width: 400px;
+}
+#mainpan{
+	overflow-y: scroll;
+	height: calc(100vh - 60px);
+}
+.noselect{
+	user-select: none;
 }

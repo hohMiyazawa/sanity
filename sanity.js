@@ -167,9 +167,11 @@ resizer.addEventListener("mousedown",function(e){
 		x : event.clientX,
 		y : event.clientY
 	}
+	document.body.classList.add("noselect");
 },true);
 document.addEventListener("mouseup",function(){
-	isDown = false
+	isDown = false;
+	document.body.classList.remove("noselect")
 },true);
 document.addEventListener("mousemove",function(event){
 	event.preventDefault();
