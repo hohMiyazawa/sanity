@@ -140,6 +140,9 @@ function authAPIcall(query,variables,callback,cache,fatalError){
 showdown.setOption("strikethrough", true);
 showdown.setOption("ghMentions", true);
 showdown.setOption("emoji", true);
+showdown.setOption("tables", false);
+showdown.setOption("simpleLineBreaks", true);
+showdown.setOption("simplifiedAutoLink", true);
 showdown.setOption("ghMentionsLink", "https://anilist.co/user/{u}");
 const converter = new showdown.Converter();
 
