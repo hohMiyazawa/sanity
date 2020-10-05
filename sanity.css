@@ -57,6 +57,7 @@ body{
 }
 #nav .location{
 	padding: 5px 20px 5px 20px;
+	color: rgb(var(--color-text));
 }
 #nav .location.active{
 	background: rgb(var(--color-foreground));
@@ -64,6 +65,7 @@ body{
 }
 .ilink{
 	cursor: pointer;
+	color: rgb(var(--color-blue));
 }
 #nav .location:hover{
 	color: rgb(var(--max-contrast));
@@ -107,4 +109,14 @@ body{
 	color: rgb(var(--color-text));
 	padding: 5px;
 	border: none;
+}
+.post .header{
+	padding: 10px;
+	border-bottom: solid;
+	border-bottom-width: 1px;
+	padding-left: 0px;
+}
+.filter .mode.active{
+	color: rgb(var(--color-blue));
+	text-decoration: underline;
 }

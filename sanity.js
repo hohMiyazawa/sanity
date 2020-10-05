@@ -296,6 +296,7 @@ document.addEventListener("mousemove",function(event){
 						activities(sort: ID_DESC,type: TEXT,isFollowing: true){
 							... on TextActivity{
 								text
+								user{name}
 								likes{name}
 							}
 						}
@@ -312,6 +313,8 @@ document.addEventListener("mousemove",function(event){
 							}
 							data.data.Page.activities.forEach(activity => {
 								let item = create("div","post","",postContent);
+								let header = create("div","header",false,item);
+								let user = create("span","ilink",activity.user.name,header);
 								let markdown = create("div","markdown",false,item);
 								markdown.innerHTML = makeHtml(activity.text);
 								let actions = create("div","actions",false,item);
@@ -334,6 +337,7 @@ document.addEventListener("mousemove",function(event){
 						activities(sort: ID_DESC,type: TEXT){
 							... on TextActivity{
 								text
+								user{name}
 								likes{name}
 							}
 						}
@@ -350,6 +354,8 @@ document.addEventListener("mousemove",function(event){
 							}
 							data.data.Page.activities.forEach(activity => {
 								let item = create("div","post",false,content);
+								let header = create("div","header",false,item);
+								let user = create("span","ilink",activity.user.name,header);
 								let markdown = create("div","markdown",false,item);
 								markdown.innerHTML = makeHtml(activity.text);
 								let actions = create("div","actions",false,item);
