@@ -160,13 +160,25 @@ const activityCache_subsets = {
 let defaultSettings = {
 };
 
-let settings = {};
+let settings = defaultSettings;
 
-let savedSettings = localStorage.getItem("settings");
+let savedSettings = JSON.parse(localStorage.getItem("sanity_settings"));
 if(savedSettings){
+	let keys = Object.keys(savedSettings);
+	keys.forEach(//this is to keep the default settings if the version in local storage is outdated
+		key => settings[key] = savedSettings[key]
+	)
 }
-else{
-	settings = defaultSettings
+let saveSettings = function(){
+	localStorage.setItem("sanity_settings",JSON.stringify(settings))
+}
+saveSettings();
+
+if(/#access_token/.test(document.URL)){
+	let tokenList = location.hash.split("&").map(a => a.split("="));
+	settings.accessToken = tokenList[0][1];
+	saveSettings();
+	location.replace(location.protocol + "//" + location.hostname + location.pathname)
 }
 
 let resizer = document.getElementById("resizer");
@@ -202,31 +214,44 @@ document.addEventListener("mousemove",function(event){
 		name: "Social",
 		isDefault: true,
 		action: function(){
-			generalAPIcall(
-				`
-			query{
-				Page(perPage: 25){
-					activities(sort: ID_DESC,type: TEXT){
-						... on TextActivity{
-							text
+			if(settings.accessToken){
+				removeChildren(content);
+				let filter = create("div","filter",false,content);
+				let mode = create("div",false,false,filter);
+				let following = create("span",false,"Following",mode);
+				let global = create("span",false,"Global",mode);
+				let forum = create("span",false,"Forum",mode);
+			}
+			else{
+				generalAPIcall(
+					`
+				query{
+					Page(perPage: 25){
+						activities(sort: ID_DESC,type: TEXT){
+							... on TextActivity{
+								text
+							}
 						}
 					}
 				}
-			}
-				`,
-				{},
-				function(data){
-					removeChildren(content);
-					if(!data){
-						create("div","error","Failed to connect to Anilist",content);
-						return
+					`,
+					{},
+					function(data){
+						if(document.querySelector("#nav .active").innerText === "Social"){
+							removeChildren(content);
+							if(!data){
+								create("div","error","Failed to connect to Anilist",content);
+								return
+							}
+							data.data.Page.activities.forEach(activity => {
+								let item = create("div","post","",content);
+								item.innerHTML = makeHtml(activity.text)
+							})
+						}
+						activityCache_subsets.global.update(data)
 					}
-					data.data.Page.activities.forEach(activity => {
-						let item = create("div","post","",content);
-						item.innerHTML = makeHtml(activity.text)
-					})
-				}
-			)
+				)
+			}
 		}
 	},
 	{
@@ -249,6 +274,10 @@ document.addEventListener("mousemove",function(event){
 		action: function(){}
 	},
 	{
+		name: "Search",
+		action: function(){}
+	},
+	{
 		name: "Settings",
 		action: function(){
 			removeChildren(content);
@@ -264,7 +293,15 @@ document.addEventListener("mousemove",function(event){
 			}
 			create("a","newTab","Github pages client",content).href = "https://anilist.co/api/v2/oauth/authorize?client_id=4168&response_type=token";
 			create("p",false,"If the selected client redirects to a different instance of sAnity, you will have to copy-paste the access token into the field below:",content);
-			let accessTokenField = create("textarea",false,false,content);
+			let accessTokenField = create("textarea",false,false,content,"display: block");
+			accessTokenField.rows = 3;
+			accessTokenField.cols = 30;
+			accessTokenField.value = settings.accessToken || "";
+			let saveButton = create("button","button","Save",content);
+			saveButton.onclick = function(){
+				settings.accessToken = accessTokenField.value;
+				saveSettings()
+			}
 		}
 	}
 ].forEach(location => {
