@@ -29,40 +29,18 @@ function create(type,classes,text,appendLocation,cssText){
 	return element
 }
 
+function removeChildren(node){
+	if(node){
+		while(node.childElementCount){
+			node.lastChild.remove()
+		}
+	}
+}
+
 const nav = document.getElementById("nav");
 const content = document.getElementById("mainpan");
 
 const locations = create("div","locations",null,nav);
-
-[
-	{
-		name: "Social",
-		action: function(){}
-	},
-	{
-		name: "Profile",
-		action: function(){}
-	},
-	{
-		name: "Anime",
-		action: function(){}
-	},
-	{
-		name: "Manga",
-		action: function(){}
-	},
-	{
-		name: "Browse",
-		action: function(){}
-	},
-	{
-		name: "Settings",
-		action: function(){}
-	}
-].forEach(location => {
-	let span = create("span",["location","ilink"],location.name,locations);
-	span.onclick = location.action
-})
 
 let aniCast = {postMessage: function(){}};//dummy object for Safari
 if(window.BroadcastChannel){
@@ -116,6 +94,7 @@ function generalAPIcall(query,variables,callback,cache,fatalError){
 	fetch(url,options).then(handleResponse).then(handleData).catch(handleError)
 }
 
+
 showdown.setOption("strikethrough", true);
 showdown.setOption("ghMentions", true);
 showdown.setOption("emoji", true);
@@ -154,31 +133,6 @@ makeHtml = function(markdown){
 	}
 	return converter.makeHtml(preProcessed.join(""))
 }
-
-generalAPIcall(
-	`
-query{
-	Page(perPage: 25){
-		activities(sort: ID_DESC,type: TEXT){
-			... on TextActivity{
-				text
-			}
-		}
-	}
-}
-	`,
-	{},
-	function(data){
-		if(!data){
-			return
-		}
-		data.data.Page.activities.forEach(activity => {
-			let item = create("div","post","",content);
-			item.innerHTML = makeHtml(activity.text)
-		})
-	}
-)
-
 
 const activityCache = new Map();
 const activityCache_subsets = {
@@ -229,4 +183,70 @@ document.addEventListener("mousemove",function(event){
 	}
 },true);
 
-
+[
+	{
+		name: "Social",
+		isDefault: true,
+		action: function(){
+			generalAPIcall(
+				`
+			query{
+				Page(perPage: 25){
+					activities(sort: ID_DESC,type: TEXT){
+						... on TextActivity{
+							text
+						}
+					}
+				}
+			}
+				`,
+				{},
+				function(data){
+					removeChildren(content);
+					if(!data){
+						create("div","error","Failed to connect to Anilist",content);
+						return
+					}
+					data.data.Page.activities.forEach(activity => {
+						let item = create("div","post","",content);
+						item.innerHTML = makeHtml(activity.text)
+					})
+				}
+			)
+		}
+	},
+	{
+		name: "Profile",
+		action: function(){
+			removeChildren(content);
+			create("div","error","You are not signed in, and sAnity has no login mechanism yet",content);
+		}
+	},
+	{
+		name: "Anime",
+		action: function(){}
+	},
+	{
+		name: "Manga",
+		action: function(){}
+	},
+	{
+		name: "Browse",
+		action: function(){}
+	},
+	{
+		name: "Settings",
+		action: function(){}
+	}
+].forEach(location => {
+	let span = create("span",["location","ilink"],location.name,locations);
+	if(location.isDefault){
+		span.classList.add("active");
+		location.action()
+	}
+	span.onclick = function(){
+		document.querySelector("#nav .active").classList.remove("active");
+		span.classList.add("active");
+		location.action()
+	}
+})

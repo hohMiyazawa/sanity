@@ -41,6 +41,9 @@ body{
 	background: rgb(var(--color-base));
 	border-bottom: solid;
 	border-bottom-width: 1px;
+	position: fixed;
+	width: 100%;
+	top: 0px;
 }
 #nav .locations{
 	display: flex;
@@ -51,12 +54,16 @@ body{
 	margin-right: auto;
 }
 #nav .location{
-	margin: 5px;
+	padding: 5px 20px 5px 20px;
+}
+#nav .location.active{
+	background: rgb(var(--color-foreground));
+	color: rgb(var(--max-contrast));
 }
 .ilink{
 	cursor: pointer;
 }
-.ilink:hover{
+#nav .location:hover{
 	color: rgb(var(--max-contrast));
 	box-shadow: 2px 2px 2px 1px rgba(0, 0, 0, 0.2);
 }
