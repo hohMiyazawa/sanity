@@ -94,6 +94,48 @@ function generalAPIcall(query,variables,callback,cache,fatalError){
 	fetch(url,options).then(handleResponse).then(handleData).catch(handleError)
 }
 
+function authAPIcall(query,variables,callback,cache,fatalError){
+	if(!settings.accessToken){
+		console.log("authorized query requested, but no access token found. converting to regular query");
+		generalAPIcall(query,variables,callback,cache,fatalError);
+		return
+	}
+	let handleData = function(data){
+		callback(data,variables)
+	};
+	let options = {
+		method: "POST",
+		headers: {
+			"Authorization": "Bearer " + settings.accessToken,
+			"Content-Type": "application/json",
+			"Accept": "application/json"
+		},
+		body: JSON.stringify({
+			"query": query,
+			"variables": variables
+		})
+	};
+	let handleError = function(error){
+		console.error(error,variables);
+		if(error.errors){
+			if(
+				error.errors.some(thing => thing.message === "Invalid token")
+			){
+				settings.accessToken = "";
+				saveSettings();
+				alert("access token was retracted");
+				console.log("access token retracted");
+				return
+			}
+		}
+		handleData(null);
+		if(fatalError){
+			throw "fatal error"
+		}
+	};
+	fetch(url,options).then(handleResponse).then(handleData).catch(handleError)
+}
+
 
 showdown.setOption("strikethrough", true);
 showdown.setOption("ghMentions", true);
@@ -143,7 +185,21 @@ const activityCache_subsets = {
 		update_following: function(data){
 		}
 	},
+	global_text: {
+		internal: [],
+		update: function(data){
+		},
+		update_following: function(data){
+		}
+	},
 	following: {
+		internal: [],
+		update: function(data){
+		},
+		update_global: function(data){
+		}
+	},
+	following_text: {
 		internal: [],
 		update: function(data){
 		},
@@ -178,7 +234,14 @@ if(/#access_token/.test(document.URL)){
 	let tokenList = location.hash.split("&").map(a => a.split("="));
 	settings.accessToken = tokenList[0][1];
 	saveSettings();
-	location.replace(location.protocol + "//" + location.hostname + location.pathname)
+	location.replace(location.protocol + "//" + location.hostname + location.pathname);
+	authAPIcall(`query{Viewer{id name}}`,{},function(data){
+		if(!data){
+			return
+		}
+		settings.me = data.data.Viewer;
+		saveSettings()
+	})
 }
 
 let resizer = document.getElementById("resizer");
@@ -218,9 +281,50 @@ document.addEventListener("mousemove",function(event){
 				removeChildren(content);
 				let filter = create("div","filter",false,content);
 				let mode = create("div",false,false,filter);
-				let following = create("span",false,"Following",mode);
-				let global = create("span",false,"Global",mode);
-				let forum = create("span",false,"Forum",mode);
+				let following = create("span",["mode","active"],"Following",mode);
+				let global = create("span","mode","Global",mode);
+				let forum = create("span","mode","Forum",mode);
+				let createPost = create("div","create",false,content);
+				let createText = create("textarea",false,false,createPost);
+					createText.setAttribute("autocomplete","off");
+					createText.placeholder = "Write a status...";	
+				let postContent = create("div","feed",false,content);
+				authAPIcall(
+					`
+				query{
+					Page(perPage: 25){
+						activities(sort: ID_DESC,type: TEXT,isFollowing: true){
+							... on TextActivity{
+								text
+								likes{name}
+							}
+						}
+					}
+				}
+					`,
+					{},
+					function(data){
+						if(document.querySelector("#nav .active").innerText === "Social"){
+							removeChildren(postContent);
+							if(!data){
+								create("div","error","Failed to connect to Anilist",postContent);
+								return
+							}
+							data.data.Page.activities.forEach(activity => {
+								let item = create("div","post","",postContent);
+								let markdown = create("div","markdown",false,item);
+								markdown.innerHTML = makeHtml(activity.text);
+								let actions = create("div","actions",false,item);
+								let likes = create("span",["action","likes"],activity.likes.length + "♥️",actions);
+								if(activity.likes.some(like => like.name === settings.me.name)){
+									likes.classList.add("ILikeThis")
+								}
+								likes.title = activity.likes.map(user => user.name).join("\n")
+							})
+						}
+						activityCache_subsets.following_text.update(data.data.Page.activities)
+					}
+				)
 			}
 			else{
 				generalAPIcall(
@@ -230,6 +334,7 @@ document.addEventListener("mousemove",function(event){
 						activities(sort: ID_DESC,type: TEXT){
 							... on TextActivity{
 								text
+								likes{name}
 							}
 						}
 					}
@@ -244,11 +349,15 @@ document.addEventListener("mousemove",function(event){
 								return
 							}
 							data.data.Page.activities.forEach(activity => {
-								let item = create("div","post","",content);
-								item.innerHTML = makeHtml(activity.text)
+								let item = create("div","post",false,content);
+								let markdown = create("div","markdown",false,item);
+								markdown.innerHTML = makeHtml(activity.text);
+								let actions = create("div","actions",false,item);
+								let likes = create("span",["action","likes"],activity.likes.length + "♥️",actions);
+								likes.title = activity.likes.map(user => user.name).join("\n")
 							})
 						}
-						activityCache_subsets.global.update(data)
+						activityCache_subsets.global_text.update(data.data.Page.activities)
 					}
 				)
 			}
@@ -300,7 +409,15 @@ document.addEventListener("mousemove",function(event){
 			let saveButton = create("button","button","Save",content);
 			saveButton.onclick = function(){
 				settings.accessToken = accessTokenField.value;
-				saveSettings()
+				saveSettings();
+				authAPIcall(`query{Viewer{id name}}`,{},function(data){
+					if(!data){
+						create("p","error","Failed to verify token",content);
+						return
+					}
+					settings.me = data.data.Viewer;
+					saveSettings();
+				})
 			}
 		}
 	}

@@ -1,6 +1,7 @@
 body{
 	--color-blue: 61,180,242;
 	--color-green: 123,213,85;
+	--color-peach: 250,122,122;
 	margin: 0;
 	height: 100%;
 }
@@ -71,8 +72,9 @@ body{
 .post{
 	background: rgb(var(--color-foreground));
 	padding: 10px;
-	margin: 15px;
+	margin: 12px;
 	border-radius: 5px;
+	position: relative;
 }
 .post img{
 	max-width: 400px;
@@ -83,4 +85,26 @@ body{
 }
 .noselect{
 	user-select: none;
+}
+.filter .mode{
+	padding: 5px;
+}
+.actions{
+	position: absolute;
+	bottom: 3px;
+	right: 10px;
+}
+.actions .likes.ILikeThis{
+	color: rgb(var(--color-peach));
+}
+.create{
+	padding: 10px;
+}
+.create textarea{
+	width: 98%;
+	resize: none;
+	background: rgb(var(--color-foreground));
+	color: rgb(var(--color-text));
+	padding: 5px;
+	border: none;
 }
