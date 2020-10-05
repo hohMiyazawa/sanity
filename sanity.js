@@ -30,7 +30,7 @@ function create(type,classes,text,appendLocation,cssText){
 }
 
 const nav = document.getElementById("nav");
-const content = document.getElementById("content");
+const content = document.getElementById("mainpan");
 
 const locations = create("div","locations",null,nav);
 
@@ -58,10 +58,6 @@ const locations = create("div","locations",null,nav);
 	{
 		name: "Settings",
 		action: function(){}
-	},
-	{
-		name: "Help",
-		action: function(){}
 	}
 ].forEach(location => {
 	let span = create("span",["location","ilink"],location.name,locations);
@@ -88,7 +84,8 @@ else{
 
 const url = "https://graphql.anilist.co";//Current Anilist API location
 let handleResponse = function(response){
-	APIlimit = response.headers.get("x-ratelimit-limit");
+	console.log(response.headers.get("x-ratelimit-limit"));
+	console.log(response.headers.get("x-ratelimit-remaining"));
 	return response.json().then(function(json){
 		return (response.ok ? json : Promise.reject(json))
 	})
@@ -206,7 +203,30 @@ const activityCache_subsets = {
 	}
 };
 
-
-
+let resizer = document.getElementById("resizer");
+let isDown = false;
+let resizePosition
+let mousePosition;
+resizer.addEventListener("mousedown",function(e){
+	isDown = true;
+	resizePosition =  {
+		x : event.clientX,
+		y : event.clientY
+	}
+},true);
+document.addEventListener("mouseup",function(){
+	isDown = false
+},true);
+document.addEventListener("mousemove",function(event){
+	event.preventDefault();
+	if(isDown){
+		mousePosition = {
+			x : event.clientX,
+			y : event.clientY
+		}
+		content.style.flex = "none";
+		content.style.width = (mousePosition.x - content.parentNode.getBoundingClientRect().left) + "px";
+	}
+},true);
 
 

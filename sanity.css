@@ -25,6 +25,16 @@ body{
 	height: 100%;
 	margin-left: 5%;
 	margin-right: 5%;
+	display: flex;
+}
+.column{
+	flex: 49%;
+}
+#resizer.column{
+	flex: 10px;
+	border-left: solid;
+	cursor: w-resize;
+	max-width: 10px;
 }
 #nav{
 	text-align: center;
