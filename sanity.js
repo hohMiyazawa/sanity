@@ -157,6 +157,18 @@ const activityCache_subsets = {
 	}
 };
 
+let defaultSettings = {
+};
+
+let settings = {};
+
+let savedSettings = localStorage.getItem("settings");
+if(savedSettings){
+}
+else{
+	settings = defaultSettings
+}
+
 let resizer = document.getElementById("resizer");
 let isDown = false;
 let resizePosition
@@ -238,7 +250,22 @@ document.addEventListener("mousemove",function(event){
 	},
 	{
 		name: "Settings",
-		action: function(){}
+		action: function(){
+			removeChildren(content);
+			let login = create("div",false,false,content);
+			create("p",false,"Sign in with a client",content);
+			if(config.API_id){
+				create("p",false,"Default client:",content);
+				create("a","newTab",config.API_label || config.API_id,content).href = "https://anilist.co/api/v2/oauth/authorize?client_id=" + config.API_id + "&response_type=token";
+				create("p",false,"Fallback client:",content);
+			}
+			else{
+				create("p",false,"Default client:",content);
+			}
+			create("a","newTab","Github pages client",content).href = "https://anilist.co/api/v2/oauth/authorize?client_id=4168&response_type=token";
+			create("p",false,"If the selected client redirects to a different instance of sAnity, you will have to copy-paste the access token into the field below:",content);
+			let accessTokenField = create("textarea",false,false,content);
+		}
 	}
 ].forEach(location => {
 	let span = create("span",["location","ilink"],location.name,locations);
@@ -251,4 +278,4 @@ document.addEventListener("mousemove",function(event){
 		span.classList.add("active");
 		location.action()
 	}
-})
+});
