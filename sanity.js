@@ -380,6 +380,7 @@ document.addEventListener("mousemove",function(event){
 						following.classList.add("active");
 						global.classList.remove("active");
 						forum.classList.remove("active");
+						document.title = "sAnity - feed";
 						if(
 							activityCache_subsets.following_text.nativeUpdateTime + activityCache_subsets.following_text.nativeUpdateTime_delta*1000
 							< (new Date()).valueOf()
@@ -426,6 +427,7 @@ document.addEventListener("mousemove",function(event){
 						following.classList.remove("active");
 						global.classList.add("active");
 						forum.classList.remove("active");
+						document.title = "sAnity - global";
 						if(
 							activityCache_subsets.global_text.nativeUpdateTime + activityCache_subsets.global_text.nativeUpdateTime_delta*1000
 							< (new Date()).valueOf()
@@ -471,7 +473,10 @@ document.addEventListener("mousemove",function(event){
 					else{
 						following.classList.remove("active");
 						global.classList.remove("active");
-						forum.classList.add("active")
+						forum.classList.add("active");
+						document.title = "sAnity - forum";
+						removeChildren(postContent);
+						create("div","error","Not yet implemented",postContent);
 					}
 				};updateMode(currentFeed);
 				following.onclick = function(){
@@ -479,6 +484,9 @@ document.addEventListener("mousemove",function(event){
 				}
 				global.onclick = function(){
 					updateMode("global")
+				}
+				forum.onclick = function(){
+					updateMode("forum")
 				}
 			}
 			else{
