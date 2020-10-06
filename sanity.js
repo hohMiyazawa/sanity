@@ -176,6 +176,13 @@ makeHtml = function(markdown){
 		preProcessed.push(centerSplit[i]);
 		openCenter = !openCenter
 	}
+	preProcessed = preProcessed.map(element => {
+		if(/~!/.test(element) || /!~/.test(element)){
+			return element.replace(/~!/g,"<span class=\"markdown_spoiler\">").replace(/!~/g,"</span>");
+		}
+		return element
+		
+	})
 	return converter.makeHtml(preProcessed.join(""))
 }
 
