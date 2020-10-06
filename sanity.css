@@ -9,8 +9,8 @@ body{
 .theme-dark{
 	--color-text: 169,183,199;
 	--max-contrast: 255,255,255;
-	--color-background: 11,22,34;
-	--color-base: 5,11,17;
+	--color-background: 9,12,25;
+	--color-base: 0,0,0;
 	--color-foreground: 21,31,46;
 }
 body{
@@ -91,6 +91,9 @@ body{
 .noselect{
 	user-select: none;
 }
+.filter .modes{
+	margin-bottom: 10px;
+}
 .filter .mode{
 	padding: 5px;
 	cursor: pointer;
@@ -128,9 +131,11 @@ body{
 }
 .post .header{
 	padding: 10px;
+	padding-left: 0px;
+}
+.post.text-post .header{
 	border-bottom: solid;
 	border-bottom-width: 1px;
-	padding-left: 0px;
 }
 .filter .mode.active{
 	color: rgb(var(--color-blue));
@@ -156,4 +161,60 @@ body{
 	content: "Spoiler";
 	color: rgb(159,173,189);
 	margin-left: 2px;
+}
+.hohCheckbox.el-checkbox__input > span.el-checkbox__inner{
+	background-color: rgb(var(--color-foreground));
+	margin-right:10px;
+	border-color: rgba(var(--color-text),.2);
+}
+.hohCheckbox input:checked + .el-checkbox__inner{
+	background-color: #409eff;
+	border-color: #409eff;
+}
+.hohCheckbox input:checked + .el-checkbox__inner::after{
+	transform: rotate(45deg) scaleY(1);
+}
+.hohCheckbox input{
+	display: none;
+}
+.hohCheckbox{
+	margin-left: 2px;
+}
+.hohCheckbox .el-checkbox__inner::after {
+	box-sizing: content-box;
+	content: "";
+	border: 1px solid #fff;
+	border-left: 0;
+	border-top: 0;
+	height: 7px;
+	left: 4px;
+	position: absolute;
+	top: 1px;
+	transform: rotate(45deg) scaleY(0);
+	width: 3px;
+	transition: transform .15s ease-in .05s;
+	transform-origin: center;
+}
+.hohCheckbox .el-checkbox__inner {
+	display: inline-block;
+	position: relative;
+	border: 1px solid #dcdfe6;
+	border-radius: 2px;
+	box-sizing: border-box;
+	width: 14px;
+	height: 14px;
+	z-index: 1;
+	transition: border-color .25s cubic-bezier(.71,-.46,.29,1.46),background-color .25s cubic-bezier(.71,-.46,.29,1.46);
+}
+.hohCheckbox.el-checkbox__input{
+	white-space: nowrap;
+	cursor: pointer;
+	outline: none;
+	display: inline-block;
+	line-height: 1;
+	position: relative;
+	vertical-align: middle;
+}
+.filter .hohCheckbox{
+	padding-left: 25px;
 }

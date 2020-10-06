@@ -29,6 +29,18 @@ function create(type,classes,text,appendLocation,cssText){
 	return element
 }
 
+function createCheckbox(target,id,checked){
+	let hohCheckbox = create("label",["hohCheckbox","el-checkbox__input"],false,target);		
+	let checkbox = create("input",false,false,hohCheckbox);
+	if(id){
+		checkbox.id = id
+	}
+	checkbox.type = "checkbox";
+	checkbox.checked = !!checked;
+	create("span","el-checkbox__inner",false,hohCheckbox);
+	return checkbox
+}
+
 function removeChildren(node){
 	if(node){
 		while(node.childElementCount){
@@ -263,7 +275,9 @@ const activityCache_subsets = {
 };
 
 let defaultSettings = {
-	defaultFeed: "following"
+	defaultFeed: "following",
+	isTextFeed: true,
+	hasRepliesFeed: false
 };
 
 let settings = defaultSettings;
@@ -343,11 +357,17 @@ document.addEventListener("mousemove",function(event){
 			if(settings.accessToken){
 				removeChildren(content);
 				let filter = create("div","filter",false,content);
-				let mode = create("div",false,false,filter);
+
 				let currentFeed = settings.defaultFeed;
-				let following = create("span","mode","Following",mode);
-				let global = create("span","mode","Global",mode);
-				let forum = create("span","mode","Forum",mode);
+				let mode = create("div","modes",false,filter);
+					let following = create("span","mode","Following",mode);
+					let global = create("span","mode","Global",mode);
+					let forum = create("span","mode","Forum",mode);
+				let typeFilter = create("div",false,false,filter);
+					let onlyText_input = createCheckbox(typeFilter,false,settings.isTextFeed);
+					create("span","label","is text",typeFilter);
+					let onlyReplies_input = createCheckbox(typeFilter,false,settings.hasRepliesFeed);
+					create("span","label","has replies",typeFilter);
 				let createPost = create("div","create",false,content);
 				let createText = create("textarea",false,false,createPost);
 					createText.setAttribute("autocomplete","off");
@@ -364,8 +384,17 @@ document.addEventListener("mousemove",function(event){
 							user.onclick = function(){
 								updateUrl("?profile=" + activity.user.name)
 							}
-						let markdown = create("div","markdown",false,item);
-						markdown.innerHTML = makeHtml(activity.text);
+						if(activity.type === "TEXT"){
+							item.classList.add("text-post");
+							let markdown = create("div","markdown",false,item);
+							markdown.innerHTML = makeHtml(activity.text);
+						}
+						else if(activity.type === "MANGA_LIST"){
+							create("span","status"," read ",header);
+						}
+						else if(activity.type === "ANIME_LIST"){
+							create("span","status"," watched ",header);
+						}
 						let actions = create("div","actions",false,item);
 						let likes = create("span",["action","likes"],(activity.likes.length || "") + "♥️",actions);
 						if(activity.likes.some(like => like.name === settings.me.name)){
@@ -381,46 +410,101 @@ document.addEventListener("mousemove",function(event){
 						global.classList.remove("active");
 						forum.classList.remove("active");
 						document.title = "sAnity - feed";
-						if(
-							activityCache_subsets.following_text.nativeUpdateTime + activityCache_subsets.following_text.nativeUpdateTime_delta*1000
-							< (new Date()).valueOf()
-						){
-							authAPIcall(
-								`
-							query{
-								Page(perPage: 25){
-									activities(sort: ID_DESC,type: TEXT,isFollowing: true){
-										... on TextActivity{
-											text
-											user{name}
-											likes{name}
-											id
-											createdAt
+						if(onlyText_input.checked){
+							if(
+								activityCache_subsets.following_text.nativeUpdateTime + activityCache_subsets.following_text.nativeUpdateTime_delta*1000
+								< (new Date()).valueOf()
+							){
+								authAPIcall(
+									`
+query{
+	Page(perPage: 25){
+		activities(sort: ID_DESC,type: TEXT,isFollowing: true){
+			... on TextActivity{
+				type
+				text
+				user{name}
+				likes{name}
+				id
+				createdAt
+			}
+		}
+	}
+}
+									`,
+									{},
+									function(data){
+										if(document.querySelector("#nav .active").innerText === "Social" && currentFeed === "following" && onlyText_input.checked){
+											if(!data){
+												removeChildren(postContent);
+												create("div","error","Failed to connect to Anilist",postContent);
+												return
+											}
+											render(data.data.Page.activities)
 										}
+										else{
+											if(!data){return}
+										}
+										activityCache_subsets.following_text.update(data.data.Page.activities)
 									}
-								}
+								)
 							}
-								`,
-								{},
-								function(data){
-									if(document.querySelector("#nav .active").innerText === "Social" && currentFeed === "following"){
-										if(!data){
-											removeChildren(postContent);
-											create("div","error","Failed to connect to Anilist",postContent);
-											return
-										}
-										render(data.data.Page.activities)
-									}
-									else{
-										if(!data){return}
-									}
-									activityCache_subsets.following_text.update(data.data.Page.activities)
-								}
-							)
+							let cachedData = activityCache_subsets.following_text.retrieve();
+							if(cachedData.length){
+								render(cachedData)
+							}
 						}
-						let cachedData = activityCache_subsets.following_text.retrieve();
-						if(cachedData.length){
-							render(cachedData)
+						else{
+							if(
+								activityCache_subsets.following.nativeUpdateTime + activityCache_subsets.following.nativeUpdateTime_delta*1000
+								< (new Date()).valueOf()
+							){
+								authAPIcall(
+									`
+query{
+	Page(perPage: 25){
+		activities(sort: ID_DESC,isFollowing: true){
+			... on TextActivity{
+				type
+				text
+				user{name}
+				likes{name}
+				id
+				createdAt
+			}
+			... on ListActivity{
+				type
+				user{name}
+				likes{name}
+				media{title{romaji}}
+				id
+				createdAt
+			}
+		}
+	}
+}
+									`,
+									{},
+									function(data){
+										if(document.querySelector("#nav .active").innerText === "Social" && currentFeed === "following" && !onlyText_input.checked){
+											if(!data){
+												removeChildren(postContent);
+												create("div","error","Failed to connect to Anilist",postContent);
+												return
+											}
+											render(data.data.Page.activities)
+										}
+										else{
+											if(!data){return}
+										}
+										activityCache_subsets.following.update(data.data.Page.activities)
+									}
+								)
+							}
+							let cachedData = activityCache_subsets.following.retrieve();
+							if(cachedData.length){
+								render(cachedData)
+							}
 						}
 					}
 					else if(currentFeed === "global"){
@@ -434,19 +518,20 @@ document.addEventListener("mousemove",function(event){
 						){
 							generalAPIcall(
 								`
-							query{
-								Page(perPage: 25){
-									activities(sort: ID_DESC,type: TEXT){
-										... on TextActivity{
-											text
-											user{name}
-											likes{name}
-											id
-											createdAt
-										}
-									}
-								}
-							}
+query{
+	Page(perPage: 25){
+		activities(sort: ID_DESC,type: TEXT){
+			... on TextActivity{
+				type
+				text
+				user{name}
+				likes{name}
+				id
+				createdAt
+			}
+		}
+	}
+}
 								`,
 								{},
 								function(data){
@@ -487,6 +572,16 @@ document.addEventListener("mousemove",function(event){
 				}
 				forum.onclick = function(){
 					updateMode("forum")
+				}
+				onlyText_input.oninput = function(){
+					updateMode(currentFeed);
+					settings.isTextFeed = onlyText_input.checked;
+					saveSettings()
+				}
+				onlyReplies_input.oninput = function(){
+					updateMode(currentFeed);
+					settings.hasRepliesFeed = onlyReplies_input.checked;
+					saveSettings()
 				}
 			}
 			else{
