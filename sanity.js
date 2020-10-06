@@ -239,26 +239,35 @@ const activityCache_subsets = {
 	following: {
 		nativeUpdateTime: 0,
 		nativeUpdateTime_delta: 4,
-		internal: [],
+		internal: new Set(),
 		update: function(data){
-			generic_update(data)
+			generic_update(data);
+			activityCache_subsets.following.nativeUpdateTime = (new Date()).valueOf();
+			data.forEach(activity => activityCache_subsets.following.internal.add(activity.id));
+			data.forEach(activity => followingUserCache.add(activity.user.name));
+			data.forEach(activity => {
+				if(activity.type === "TEXT"){
+					activityCache_subsets.following_text.internal.add(activity.id)
+				}
+			})
 		},
 		retrieve: function(){
-			return []
+			return [...activityCache_subsets.following.internal].sort((b,a) => a - b).slice(0,25).map(node => activityCache.get(node))
 		}
 	},
 	following_text: {
 		nativeUpdateTime: 0,
 		nativeUpdateTime_delta: 6,
-		internal: [],
+		internal: new Set(),
 		update: function(data){
 			generic_update(data);
 			activityCache_subsets.following_text.nativeUpdateTime = (new Date()).valueOf();
-			activityCache_subsets.following_text.internal = data.map(activity => activity.id);
-			data.forEach(activity => followingUserCache.add(activity.user.name))
+			data.forEach(activity => activityCache_subsets.following_text.internal.add(activity.id));
+			data.forEach(activity => activityCache_subsets.following.internal.add(activity.id));
+			data.forEach(activity => followingUserCache.add(activity.user.name));
 		},
-		retrieve: function(){
-			return activityCache_subsets.following_text.internal.map(node => activityCache.get(node))
+		retrieve: function(page){
+			return [...activityCache_subsets.following_text.internal].sort((b,a) => a - b).slice(0,25).map(node => activityCache.get(node))
 		}
 	},
 	users: {
