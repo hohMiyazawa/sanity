@@ -4,6 +4,7 @@ body{
 	--color-peach: 250,122,122;
 	margin: 0;
 	height: 100%;
+	font-family: sans-serif;
 }
 .theme-dark{
 	--color-text: 169,183,199;
@@ -85,6 +86,7 @@ body{
 	overflow-y: scroll;
 	height: calc(100vh - 60px);
 	scrollbar-width: thin;
+	width: 60%;
 }
 .noselect{
 	user-select: none;

@@ -143,19 +143,19 @@ showdown.setOption("emoji", true);
 showdown.setOption("tables", false);
 showdown.setOption("simpleLineBreaks", true);
 showdown.setOption("simplifiedAutoLink", true);
-showdown.setOption("ghMentionsLink", "https://anilist.co/user/{u}");
+showdown.setOption("ghMentionsLink", "?profile={u}");
 const converter = new showdown.Converter();
 
 makeHtml = function(markdown){
 	markdown = markdown.replace("----","---");
 	let centerSplit = markdown.split("~~~");
-	let imgRegex = /img(\d+%?)?\(.+?\)/g;
+	let imgRegex = /img(\d+%?)?\(.+?\)/gi;
 	centerSplit = centerSplit.map(component => {
 		let images = component.match(imgRegex);
 		if(images){
 
 			images.forEach(image => {
-				let imageParts = image.match(/^img(\d+%?)?\((.+?)\)$/);
+				let imageParts = image.match(/^img(\d+%?)?\((.+?)\)$/i);
 				component = component.replace(image,`<img width="${imageParts[1] || ""}" src="${imageParts[2]}">`)
 			})
 			return component
@@ -179,46 +179,84 @@ makeHtml = function(markdown){
 	return converter.makeHtml(preProcessed.join(""))
 }
 
+const globalUserCache = new Set();
+const followingUserCache = new Set();
+
 const mediaCache = new Map();
 
 const activityCache = new Map();
+let generic_update = function(data){
+	data.forEach(activity => {
+		activity.updatedAt = (new Date()).valueOf();
+		activityCache.set(activity.id,activity)
+	})
+}
 const activityCache_subsets = {
 	global: {
+		nativeUpdateTime: 0,
+		nativeUpdateTime_delta: 2,
 		internal: [],
 		update: function(data){
+			generic_update(data)
 		},
-		update_following: function(data){
+		retrieve: function(){
+			return []
 		}
 	},
 	global_text: {
+		nativeUpdateTime: 0,
+		nativeUpdateTime_delta: 5,
 		internal: [],
 		update: function(data){
+			generic_update(data);
+			activityCache_subsets.global_text.nativeUpdateTime = (new Date()).valueOf();
+			activityCache_subsets.global_text.internal = data.map(activity => activity.id);
+			data.forEach(activity => globalUserCache.add(activity.user.name))
 		},
-		update_following: function(data){
+		retrieve: function(){
+			return activityCache_subsets.global_text.internal.map(node => activityCache.get(node))
 		}
 	},
 	following: {
+		nativeUpdateTime: 0,
+		nativeUpdateTime_delta: 4,
 		internal: [],
 		update: function(data){
+			generic_update(data)
 		},
-		update_global: function(data){
+		retrieve: function(){
+			return []
 		}
 	},
 	following_text: {
+		nativeUpdateTime: 0,
+		nativeUpdateTime_delta: 6,
 		internal: [],
 		update: function(data){
+			generic_update(data);
+			activityCache_subsets.following_text.nativeUpdateTime = (new Date()).valueOf();
+			activityCache_subsets.following_text.internal = data.map(activity => activity.id);
+			data.forEach(activity => followingUserCache.add(activity.user.name))
 		},
-		update_global: function(data){
+		retrieve: function(){
+			return activityCache_subsets.following_text.internal.map(node => activityCache.get(node))
 		}
 	},
 	users: {
+		nativeUpdateTime: 0,
+		nativeUpdateTime_delta: 10,
 		users: new Map(),
 		update: function(data){
+			generic_update(data)
+		},
+		retrieve: function(){
+			return []
 		}
 	}
 };
 
 let defaultSettings = {
+	defaultFeed: "following"
 };
 
 let settings = defaultSettings;
@@ -234,6 +272,11 @@ let saveSettings = function(){
 	localStorage.setItem("sanity_settings",JSON.stringify(settings))
 }
 saveSettings();
+
+if(settings.mainWidth){
+	content.style.width = settings.mainWidth;
+	content.style.flex = "0 0 auto"
+}
 
 let updateUrl = function(place){
 	location.replace(location.protocol + "//" + location.hostname + location.pathname + place)
@@ -277,7 +320,10 @@ document.addEventListener("mousemove",function(event){
 			y : event.clientY
 		}
 		content.style.flex = "none";
-		content.style.width = (mousePosition.x - content.parentNode.getBoundingClientRect().left) + "px";
+		let width = (mousePosition.x - content.parentNode.getBoundingClientRect().left);
+		content.style.width = width + "px";
+		settings.mainWidth = width + "px";
+		saveSettings()
 	}
 },true);
 
@@ -290,7 +336,8 @@ document.addEventListener("mousemove",function(event){
 				removeChildren(content);
 				let filter = create("div","filter",false,content);
 				let mode = create("div",false,false,filter);
-				let following = create("span",["mode","active"],"Following",mode);
+				let currentFeed = settings.defaultFeed;
+				let following = create("span","mode","Following",mode);
 				let global = create("span","mode","Global",mode);
 				let forum = create("span","mode","Forum",mode);
 				let createPost = create("div","create",false,content);
@@ -298,48 +345,133 @@ document.addEventListener("mousemove",function(event){
 					createText.setAttribute("autocomplete","off");
 					createText.placeholder = "Write a status...";	
 				let postContent = create("div","feed",false,content);
-				authAPIcall(
-					`
-				query{
-					Page(perPage: 25){
-						activities(sort: ID_DESC,type: TEXT,isFollowing: true){
-							... on TextActivity{
-								text
-								user{name}
-								likes{name}
+				
+				let render = function(data){
+					console.log("rendering feed!");
+					removeChildren(postContent)
+					data.forEach(activity => {
+						let item = create("div","post","",postContent);
+						let header = create("div","header",false,item);
+						let user = create("span","ilink",activity.user.name,header);
+							user.onclick = function(){
+								updateUrl("?profile=" + activity.user.name)
 							}
+						let markdown = create("div","markdown",false,item);
+						markdown.innerHTML = makeHtml(activity.text);
+						let actions = create("div","actions",false,item);
+						let likes = create("span",["action","likes"],(activity.likes.length || "") + "♥️",actions);
+						if(activity.likes.some(like => like.name === settings.me.name)){
+							likes.classList.add("ILikeThis")
 						}
-					}
+						likes.title = activity.likes.map(user => user.name).join("\n")
+					})
 				}
-					`,
-					{},
-					function(data){
-						if(document.querySelector("#nav .active").innerText === "Social"){
-							removeChildren(postContent);
-							if(!data){
-								create("div","error","Failed to connect to Anilist",postContent);
-								return
-							}
-							data.data.Page.activities.forEach(activity => {
-								let item = create("div","post","",postContent);
-								let header = create("div","header",false,item);
-								let user = create("span","ilink",activity.user.name,header);
-									user.onclick = function(){
-										updateUrl("?profile=" + activity.user.name)
+				let updateMode = function(newFeed){
+					currentFeed = newFeed;
+					if(currentFeed === "following"){
+						following.classList.add("active");
+						global.classList.remove("active");
+						forum.classList.remove("active");
+						if(
+							activityCache_subsets.following_text.nativeUpdateTime + activityCache_subsets.following_text.nativeUpdateTime_delta*1000
+							< (new Date()).valueOf()
+						){
+							authAPIcall(
+								`
+							query{
+								Page(perPage: 25){
+									activities(sort: ID_DESC,type: TEXT,isFollowing: true){
+										... on TextActivity{
+											text
+											user{name}
+											likes{name}
+											id
+											createdAt
+										}
 									}
-								let markdown = create("div","markdown",false,item);
-								markdown.innerHTML = makeHtml(activity.text);
-								let actions = create("div","actions",false,item);
-								let likes = create("span",["action","likes"],(activity.likes.length || "") + "♥️",actions);
-								if(activity.likes.some(like => like.name === settings.me.name)){
-									likes.classList.add("ILikeThis")
 								}
-								likes.title = activity.likes.map(user => user.name).join("\n")
-							})
+							}
+								`,
+								{},
+								function(data){
+									if(document.querySelector("#nav .active").innerText === "Social" && currentFeed === "following"){
+										if(!data){
+											removeChildren(postContent);
+											create("div","error","Failed to connect to Anilist",postContent);
+											return
+										}
+										render(data.data.Page.activities)
+									}
+									else{
+										if(!data){return}
+									}
+									activityCache_subsets.following_text.update(data.data.Page.activities)
+								}
+							)
 						}
-						activityCache_subsets.following_text.update(data.data.Page.activities)
+						let cachedData = activityCache_subsets.following_text.retrieve();
+						if(cachedData.length){
+							render(cachedData)
+						}
 					}
-				)
+					else if(currentFeed === "global"){
+						following.classList.remove("active");
+						global.classList.add("active");
+						forum.classList.remove("active");
+						if(
+							activityCache_subsets.global_text.nativeUpdateTime + activityCache_subsets.global_text.nativeUpdateTime_delta*1000
+							< (new Date()).valueOf()
+						){
+							generalAPIcall(
+								`
+							query{
+								Page(perPage: 25){
+									activities(sort: ID_DESC,type: TEXT){
+										... on TextActivity{
+											text
+											user{name}
+											likes{name}
+											id
+											createdAt
+										}
+									}
+								}
+							}
+								`,
+								{},
+								function(data){
+									if(document.querySelector("#nav .active").innerText === "Social" && currentFeed === "global"){
+										if(!data){
+											removeChildren(postContent)
+											create("div","error","Failed to connect to Anilist",postContent);
+											return
+										}
+										render(data.data.Page.activities)
+									}
+									else{
+										if(!data){return}
+									}
+									activityCache_subsets.global_text.update(data.data.Page.activities)
+								}
+							)
+						}
+						let cachedData = activityCache_subsets.global_text.retrieve();
+						if(cachedData.length){
+							render(cachedData)
+						}
+					}
+					else{
+						following.classList.remove("active");
+						global.classList.remove("active");
+						forum.classList.add("active")
+					}
+				};updateMode(currentFeed);
+				following.onclick = function(){
+					updateMode("following")
+				}
+				global.onclick = function(){
+					updateMode("global")
+				}
 			}
 			else{
 				generalAPIcall(
