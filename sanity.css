@@ -84,20 +84,34 @@ body{
 #mainpan{
 	overflow-y: scroll;
 	height: calc(100vh - 60px);
+	scrollbar-width: thin;
 }
 .noselect{
 	user-select: none;
 }
 .filter .mode{
 	padding: 5px;
+	cursor: pointer;
+}
+.filter .mode:hover{
+	color: rgb(var(--max-contrast));
 }
 .actions{
 	position: absolute;
 	bottom: 3px;
 	right: 10px;
 }
+.actions .action{
+	cursor: pointer;
+}
 .actions .likes.ILikeThis{
 	color: rgb(var(--color-peach));
+}
+.actions .likes:hover{
+	color: rgb(var(--color-peach));
+}
+.actions .likes.ILikeThis:hover{
+	color: rgb(var(--color-text));
 }
 .create{
 	padding: 10px;
@@ -119,4 +133,7 @@ body{
 .filter .mode.active{
 	color: rgb(var(--color-blue));
 	text-decoration: underline;
+}
+.post .markdown{
+	margin-bottom: 12px;
 }

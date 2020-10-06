@@ -179,6 +179,8 @@ makeHtml = function(markdown){
 	return converter.makeHtml(preProcessed.join(""))
 }
 
+const mediaCache = new Map();
+
 const activityCache = new Map();
 const activityCache_subsets = {
 	global: {
@@ -233,11 +235,15 @@ let saveSettings = function(){
 }
 saveSettings();
 
+let updateUrl = function(place){
+	location.replace(location.protocol + "//" + location.hostname + location.pathname + place)
+}
+
 if(/#access_token/.test(document.URL)){
 	let tokenList = location.hash.split("&").map(a => a.split("="));
 	settings.accessToken = tokenList[0][1];
 	saveSettings();
-	location.replace(location.protocol + "//" + location.hostname + location.pathname);
+	updateUrl("");
 	authAPIcall(`query{Viewer{id name}}`,{},function(data){
 		if(!data){
 			return
@@ -318,10 +324,13 @@ document.addEventListener("mousemove",function(event){
 								let item = create("div","post","",postContent);
 								let header = create("div","header",false,item);
 								let user = create("span","ilink",activity.user.name,header);
+									user.onclick = function(){
+										updateUrl("?profile=" + activity.user.name)
+									}
 								let markdown = create("div","markdown",false,item);
 								markdown.innerHTML = makeHtml(activity.text);
 								let actions = create("div","actions",false,item);
-								let likes = create("span",["action","likes"],activity.likes.length + "♥️",actions);
+								let likes = create("span",["action","likes"],(activity.likes.length || "") + "♥️",actions);
 								if(activity.likes.some(like => like.name === settings.me.name)){
 									likes.classList.add("ILikeThis")
 								}
@@ -362,7 +371,7 @@ document.addEventListener("mousemove",function(event){
 								let markdown = create("div","markdown",false,item);
 								markdown.innerHTML = makeHtml(activity.text);
 								let actions = create("div","actions",false,item);
-								let likes = create("span",["action","likes"],activity.likes.length + "♥️",actions);
+								let likes = create("span",["action","likes"],(activity.likes.length || "") + "♥️",actions);
 								likes.title = activity.likes.map(user => user.name).join("\n")
 							})
 						}
@@ -432,6 +441,7 @@ document.addEventListener("mousemove",function(event){
 	}
 ].forEach(location => {
 	let span = create("span",["location","ilink"],location.name,locations);
+	span.id = "nav-" + location.name;
 	if(location.isDefault){
 		span.classList.add("active");
 		location.action()
