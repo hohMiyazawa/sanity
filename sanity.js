@@ -286,7 +286,7 @@ if(settings.mainWidth){
 }
 
 let updateUrl = function(place){
-	location.replace(location.protocol + "//" + location.hostname + location.pathname + place)
+	history.pushState({}, null, place)
 }
 
 if(/#access_token/.test(document.URL)){
@@ -339,6 +339,7 @@ document.addEventListener("mousemove",function(event){
 		name: "Social",
 		isDefault: true,
 		action: function(){
+			updateUrl("?social");
 			if(settings.accessToken){
 				removeChildren(content);
 				let filter = create("div","filter",false,content);
@@ -523,29 +524,39 @@ document.addEventListener("mousemove",function(event){
 	{
 		name: "Profile",
 		action: function(){
+			updateUrl("?profile");
 			removeChildren(content);
-			create("div","error","You are not signed in, and sAnity has no login mechanism yet",content);
+			create("div","error","You are not signed in. Go to 'settings' for login options",content);
 		}
 	},
 	{
 		name: "Anime",
-		action: function(){}
+		action: function(){
+			updateUrl("?anime");
+		}
 	},
 	{
 		name: "Manga",
-		action: function(){}
+		action: function(){
+			updateUrl("?manga");
+		}
 	},
 	{
 		name: "Browse",
-		action: function(){}
+		action: function(){
+			updateUrl("?browse");
+		}
 	},
 	{
 		name: "Search",
-		action: function(){}
+		action: function(){
+			updateUrl("?search");
+		}
 	},
 	{
 		name: "Settings",
 		action: function(){
+			updateUrl("?settings");
 			removeChildren(content);
 			let login = create("div",false,false,content);
 			create("p",false,"Sign in with a client",content);
