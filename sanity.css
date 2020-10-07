@@ -218,3 +218,6 @@ body{
 .filter .hohCheckbox{
 	padding-left: 25px;
 }
+.ilink.manga{
+	color: rgb(var(--color-green));
+}

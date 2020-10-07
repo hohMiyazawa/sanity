@@ -285,6 +285,7 @@ const activityCache_subsets = {
 
 let defaultSettings = {
 	defaultFeed: "following",
+	greenManga: true,
 	isTextFeed: true,
 	hasRepliesFeed: false
 };
@@ -398,11 +399,30 @@ document.addEventListener("mousemove",function(event){
 							let markdown = create("div","markdown",false,item);
 							markdown.innerHTML = makeHtml(activity.text);
 						}
-						else if(activity.type === "MANGA_LIST"){
-							create("span","status"," read ",header);
-						}
-						else if(activity.type === "ANIME_LIST"){
-							create("span","status"," watched ",header);
+						else if(activity.type === "MANGA_LIST" || activity.type === "ANIME_LIST"){
+							if(activity.status === "dropped"){
+								create("span","status"," dropped ",header);
+								let media = create("span","ilink",activity.media.title.romaji,header);
+								if(activity.type === "ANIME_LIST"){
+									media.classList.add("anime")
+								}
+								else{
+									media.classList.add("manga")
+								}
+								create("span","status"," at " + (activity.type === "ANIME_LIST" ? " episode " : " chapter ")  + activity.progress,header)
+							}
+							else{
+								create("span","status"," " + activity.status + " ",header);
+								create("span","status",activity.progress,header);
+								create("span","status"," of ",header);
+								let media = create("span","ilink",activity.media.title.romaji,header);
+								if(activity.type === "ANIME_LIST"){
+									media.classList.add("anime")
+								}
+								else{
+									media.classList.add("manga")
+								}
+							}
 						}
 						let actions = create("div","actions",false,item);
 						let likes = create("span",["action","likes"],(activity.likes.length || "") + "♥️",actions);
@@ -486,6 +506,8 @@ query{
 				user{name}
 				likes{name}
 				media{title{romaji}}
+				progress
+				status
 				id
 				createdAt
 			}
