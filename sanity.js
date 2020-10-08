@@ -478,9 +478,9 @@ document.addEventListener("mousemove",function(event){
 								replyWrap = null
 							}
 							else{
-								replyWrap = create("div","replies",false,postWrap);
+								replyWrap = create("div","reply-wrap",false,postWrap);
 								activity.replies.forEach(reply => {
-									let replyDiv = create("div","reply-wrap",false,replyWrap);
+									let replyDiv = create("div","reply",false,replyWrap);
 									let header = create("div","header",false,replyDiv);
 									let user = create("span","ilink",reply.user.name,header);
 										user.onclick = function(){
@@ -488,6 +488,12 @@ document.addEventListener("mousemove",function(event){
 										}
 									let markdown = create("div","markdown",false,replyDiv);
 										markdown.innerHTML = makeHtml(reply.text);
+									let replyActions = create("div","actions",false,replyDiv);
+									let likes = create("span",["action","likes"],(reply.likes.length || "") + "♥️",replyActions);
+									if(reply.likes.some(like => like.name === settings.me.name)){
+										likes.classList.add("ILikeThis")
+									}
+									likes.title = reply.likes.map(user => user.name).join("\n")
 								})
 							}
 						}
