@@ -472,6 +472,7 @@ document.addEventListener("mousemove",function(event){
 						let replies = create("span",["action","replies"],(activity.replies.length || "") + "💬",actions);
 						let replyWrap = null;
 						replies.onclick = function(){
+							postWrap.classList.toggle("replies-open");
 							if(replyWrap){
 								removeChildren(replyWrap);
 								replyWrap = null
@@ -479,7 +480,7 @@ document.addEventListener("mousemove",function(event){
 							else{
 								replyWrap = create("div","replies",false,postWrap);
 								activity.replies.forEach(reply => {
-									let replyDiv = create("div","reply",false,replyWrap);
+									let replyDiv = create("div","reply-wrap",false,replyWrap);
 									let header = create("div","header",false,replyDiv);
 									let user = create("span","ilink",reply.user.name,header);
 										user.onclick = function(){
@@ -494,7 +495,26 @@ document.addEventListener("mousemove",function(event){
 						if(activity.likes.some(like => like.name === settings.me.name)){
 							likes.classList.add("ILikeThis")
 						}
-						likes.title = activity.likes.map(user => user.name).join("\n")
+						likes.title = activity.likes.map(user => user.name).join("\n");
+						likes.onclick = function(){
+							let meIndex = activity.likes.findIndex(like => like.name === settings.me.name);
+							if(meIndex === -1){
+								activity.likes.push({name: settings.me.name})
+							}
+							else{
+								activity.likes.splice(meIndex,1)
+							};
+							likes.classList.toggle("ILikeThis");
+							likes.innerText = (activity.likes.length || "") + "♥️";
+							authAPIcall(
+								"mutation($id:Int){ToggleLike(id:$id,type:ACTIVITY){id}}",
+								{id: activity.id},
+								data => {if(!data){
+									console.log("like failed!");
+									likes.classList.toggle("ILikeThis")
+								}}
+							)
+						}
 					})
 				}
 				let updateMode = function(newFeed){
@@ -527,8 +547,7 @@ query{
 			}
 		}
 	}
-}
-								`,
+}`,
 								{},
 								function(data){
 									if(document.querySelector("#nav .active").innerText === "Social" && currentFeed === "following" && onlyText_input.checked){
@@ -590,8 +609,7 @@ query{
 			}
 		}
 	}
-}
-								`,
+}`,
 								{},
 								function(data){
 									if(document.querySelector("#nav .active").innerText === "Social" && currentFeed === "following" && !onlyText_input.checked){
@@ -641,8 +659,7 @@ query{
 			}
 		}
 	}
-}
-							`,
+}`,
 							{},
 							function(data){
 								if(document.querySelector("#nav .active").innerText === "Social" && currentFeed === "global"){
@@ -696,18 +713,17 @@ query{
 			else{
 				generalAPIcall(
 					`
-				query{
-					Page(perPage: 25){
-						activities(sort: ID_DESC,type: TEXT){
-							... on TextActivity{
-								text
-								user{name}
-								likes{name}
-							}
-						}
-					}
-				}
-					`,
+query{
+	Page(perPage: 25){
+		activities(sort: ID_DESC,type: TEXT){
+			... on TextActivity{
+				text
+				user{name}
+				likes{name}
+			}
+		}
+	}
+}`,
 					{},
 					function(data){
 						if(document.querySelector("#nav .active").innerText === "Social"){

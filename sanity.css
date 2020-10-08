@@ -74,10 +74,9 @@ body{
 }
 .post{
 	background: rgb(var(--color-foreground));
-	padding: 10px;
-	margin: 12px;
 	border-radius: 5px;
 	position: relative;
+	padding: 10px;
 }
 .post img{
 	max-width: 400px;
@@ -121,9 +120,6 @@ body{
 }
 .actions .likes:hover{
 	text-shadow: 0 0 0 rgb(var(--color-peach));
-}
-.actions .likes.ILikeThis:hover{
-	text-shadow: 0 0 0 rgb(var(--color-text));
 }
 .create{
 	padding: 10px;
@@ -231,4 +227,23 @@ body{
 }
 .ilink.manga{
 	color: rgb(var(--color-green));
+}
+.activity{
+	margin: 12px;
+}
+.activity.replies-open{
+	border-right: dashed;
+	border-right-width: 2px;
+	margin-right: 10px;
+}
+.activity .reply-wrap{
+	margin-left: 40px;
+	margin-right: 10px;
+	margin-bottom: 10px;
+}
+.activity .reply{
+	background: rgb(var(--color-foreground));
+	padding: 5px;
+	border-radius: 3px;
+	margin: 3px;
 }
