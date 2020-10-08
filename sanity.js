@@ -453,7 +453,9 @@ document.addEventListener("mousemove",function(event){
 								else{
 									media.classList.add("manga")
 								}
-								create("span","status"," at " + (activity.type === "ANIME_LIST" ? " episode " : " chapter ")  + activity.progress,header)
+								if(activity.progress){
+									create("span","status"," at " + (activity.type === "ANIME_LIST" ? " episode " : " chapter ")  + activity.progress,header)
+								}
 							}
 							else{
 								create("span","status"," " + activity.status + " ",header);

@@ -74,7 +74,7 @@ body{
 }
 .post{
 	background: rgb(var(--color-foreground));
-	border-radius: 5px;
+	border-radius: 3px;
 	position: relative;
 	padding: 10px;
 }
@@ -104,6 +104,7 @@ body{
 	position: absolute;
 	bottom: 3px;
 	right: 10px;
+	user-select: none;
 }
 .actions .action{
 	cursor: pointer;
@@ -229,12 +230,12 @@ body{
 	color: rgb(var(--color-green));
 }
 .activity{
-	margin: 12px;
+	margin: 10px;
 }
 .activity.replies-open{
 	border-right: dashed;
 	border-right-width: 2px;
-	margin-right: 10px;
+	margin-right: 8px;
 }
 .activity .reply-wrap{
 	margin-left: 40px;
