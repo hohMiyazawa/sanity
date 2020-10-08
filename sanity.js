@@ -209,6 +209,7 @@ class ActivityNode{
 	constructor(activity){
 		this.cache = {};
 		this.activity = activity;
+		this.updatedAt = (new Date()).valueOf();
 		activity_map.set(activity.id,this)
 	}
 }
@@ -251,7 +252,9 @@ const insert_activity_node = function(node,cache_location,cache_name){
 const update_cache = function(activities,type,optionalName){
 	activities.forEach(activity => {
 		if(activity_map.has(activity.id)){
-			activity_map.get(activity.id).activity = activity
+			let node = activity_map.get(activity.id);
+			node.activity = activity;
+			node.updatedAt = (new Date()).valueOf()
 		}
 		else{
 			let newNode = new ActivityNode(activity);
@@ -320,7 +323,14 @@ let defaultSettings = {
 	defaultFeed: "following",
 	greenManga: true,
 	isTextFeed: true,
-	hasRepliesFeed: false
+	hasRepliesFeed: false,
+	cacheDelays: {
+		replyHover: 10*60*1000,
+		replyClick: 1*60*1000,
+		replyReply: 20*1000,
+		likeHover: 2*60*1000
+		//likeClick: always
+	}
 };
 
 let settings = defaultSettings;
@@ -421,7 +431,7 @@ document.addEventListener("mousemove",function(event){
 					console.log("rendering feed!");
 					removeChildren(postContent)
 					data.forEach(activity => {
-						let postWrap = create("div",false,false,postContent);
+						let postWrap = create("div","activity",false,postContent);
 						let item = create("div","post","",postWrap);
 						let header = create("div","header",false,item);
 						let user = create("span","ilink",activity.user.name,header);
@@ -469,7 +479,14 @@ document.addEventListener("mousemove",function(event){
 							else{
 								replyWrap = create("div","replies",false,postWrap);
 								activity.replies.forEach(reply => {
-									create("div","reply",reply.user.name,replyWrap)
+									let replyDiv = create("div","reply",false,replyWrap);
+									let header = create("div","header",false,replyDiv);
+									let user = create("span","ilink",reply.user.name,header);
+										user.onclick = function(){
+											updateUrl("?profile=" + activity.user.name)
+										}
+									let markdown = create("div","markdown",false,replyDiv);
+										markdown.innerHTML = makeHtml(reply.text);
 								})
 							}
 						}
@@ -477,7 +494,7 @@ document.addEventListener("mousemove",function(event){
 						if(activity.likes.some(like => like.name === settings.me.name)){
 							likes.classList.add("ILikeThis")
 						}
-						likes.title = activity.likes.map(user => user.name).join("\n");
+						likes.title = activity.likes.map(user => user.name).join("\n")
 					})
 				}
 				let updateMode = function(newFeed){
