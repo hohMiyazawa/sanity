@@ -203,85 +203,118 @@ const followingUserCache = new Set();
 
 const mediaCache = new Map();
 
-const activityCache = new Map();
-let generic_update = function(data){
-	data.forEach(activity => {
-		activity.updatedAt = (new Date()).valueOf();
-		activityCache.set(activity.id,activity)
-	})
+const activity_map = new Map();
+
+class ActivityNode{
+	constructor(activity){
+		this.cache = {};
+		this.activity = activity;
+		activity_map.set(activity.id,this)
+	}
 }
-const activityCache_subsets = {
-	global: {
-		nativeUpdateTime: 0,
-		nativeUpdateTime_delta: 2,
-		internal: [],
-		update: function(data){
-			generic_update(data)
-		},
-		retrieve: function(){
-			return []
+
+const cache_heads = {
+	global: null,
+	global_text: null,
+	following: null,
+	following_text: null,
+	users: {}
+}
+
+const insert_activity_node = function(node,cache_location,cache_name){
+	if(!cache_location[cache_name]){
+		node.cache[cache_name] = null;
+		cache_location[cache_name] = node
+	}
+	else if(node.activity.id > cache_location[cache_name].activity.id){
+		node.cache[cache_name] = cache_location[cache_name];
+		cache_location[cache_name] = node
+	}
+	else{
+		let head = cache_location[cache_name];
+		let next_head = head.cache[cache_name];
+		while(next_head && next_head.activity.id > node.activity.id){
+			head = next_head;
+			next_head = head.cache[cache_name]
 		}
-	},
-	global_text: {
-		nativeUpdateTime: 0,
-		nativeUpdateTime_delta: 5,
-		internal: [],
-		update: function(data){
-			generic_update(data);
-			activityCache_subsets.global_text.nativeUpdateTime = (new Date()).valueOf();
-			activityCache_subsets.global_text.internal = data.map(activity => activity.id);
-			data.forEach(activity => globalUserCache.add(activity.user.name))
-		},
-		retrieve: function(){
-			return activityCache_subsets.global_text.internal.map(node => activityCache.get(node))
+		if(!next_head){
+			node.cache[cache_name] = null;
+			head.cache[cache_name] = node
 		}
-	},
-	following: {
-		nativeUpdateTime: 0,
-		nativeUpdateTime_delta: 4,
-		internal: new Set(),
-		update: function(data){
-			generic_update(data);
-			activityCache_subsets.following.nativeUpdateTime = (new Date()).valueOf();
-			data.forEach(activity => activityCache_subsets.following.internal.add(activity.id));
-			data.forEach(activity => followingUserCache.add(activity.user.name));
-			data.forEach(activity => {
-				if(activity.type === "TEXT"){
-					activityCache_subsets.following_text.internal.add(activity.id)
-				}
-			})
-		},
-		retrieve: function(){
-			return [...activityCache_subsets.following.internal].sort((b,a) => a - b).slice(0,25).map(node => activityCache.get(node))
-		}
-	},
-	following_text: {
-		nativeUpdateTime: 0,
-		nativeUpdateTime_delta: 6,
-		internal: new Set(),
-		update: function(data){
-			generic_update(data);
-			activityCache_subsets.following_text.nativeUpdateTime = (new Date()).valueOf();
-			data.forEach(activity => activityCache_subsets.following_text.internal.add(activity.id));
-			data.forEach(activity => activityCache_subsets.following.internal.add(activity.id));
-			data.forEach(activity => followingUserCache.add(activity.user.name));
-		},
-		retrieve: function(page){
-			return [...activityCache_subsets.following_text.internal].sort((b,a) => a - b).slice(0,25).map(node => activityCache.get(node))
-		}
-	},
-	users: {
-		nativeUpdateTime: 0,
-		nativeUpdateTime_delta: 10,
-		users: new Map(),
-		update: function(data){
-			generic_update(data)
-		},
-		retrieve: function(){
-			return []
+		else{
+			head.cache[cache_name] = node;
+			node.cache[cache_name] = next_head
 		}
 	}
-};
+}
+
+const update_cache = function(activities,type,optionalName){
+	activities.forEach(activity => {
+		if(activity_map.has(activity.id)){
+			activity_map.get(activity.id).activity = activity
+		}
+		else{
+			let newNode = new ActivityNode(activity);
+			if(
+				type === "global"
+				|| (
+					globalUserCache.has(activity.user.name)
+					&& (
+						activity.type === "TEXT"
+						|| (
+							activity.type !== "MESSAGE"
+							&& activity.replies.length
+						)
+					)
+				)
+			){
+				insert_activity_node(newNode,cache_heads,"global")
+			}
+			if(
+				type === "global_text"
+				|| (
+					globalUserCache.has(activity.user.name)
+					&& activity.type === "TEXT"
+				)
+			){
+				insert_activity_node(newNode,cache_heads,"global_text")
+			}
+			if(
+				type === "following"
+				|| (
+					followingUserCache.has(activity.user.name)
+					&& activity.type !== "MESSAGE"
+				)
+			){
+				insert_activity_node(newNode,cache_heads,"following")
+			}
+			if(
+				type === "following_text"
+				|| (
+					followingUserCache.has(activity.user.name)
+					&& activity.type === "TEXT"
+				)
+			){
+				insert_activity_node(newNode,cache_heads,"following_text")
+			}
+		}
+	})
+}
+
+const retrieve_cache = function(cache_name,amount,filterFunction,optionalName){
+	if(!filterFunction){
+		filterFunction = function(){return true}
+	}
+	let returnList = [];
+	let head = cache_heads[cache_name];
+	while(returnList.length < amount && head){
+		if(filterFunction(head.activity)){
+			returnList.push(head.activity)
+		}
+		head = head.cache[cache_name]
+	}
+	return returnList
+}
 
 let defaultSettings = {
 	defaultFeed: "following",
@@ -440,11 +473,7 @@ document.addEventListener("mousemove",function(event){
 						forum.classList.remove("active");
 						document.title = "sAnity - feed";
 						if(onlyText_input.checked){
-							if(
-								activityCache_subsets.following_text.nativeUpdateTime + activityCache_subsets.following_text.nativeUpdateTime_delta*1000
-								< (new Date()).valueOf()
-							){
-								authAPIcall(
+							authAPIcall(
 									`
 query{
 	Page(perPage: 25){
@@ -460,39 +489,34 @@ query{
 		}
 	}
 }
-									`,
-									{},
-									function(data){
-										if(document.querySelector("#nav .active").innerText === "Social" && currentFeed === "following" && onlyText_input.checked){
-											if(!data){
-												removeChildren(postContent);
-												create("div","error","Failed to connect to Anilist",postContent);
-												return
-											}
-											render(data.data.Page.activities)
+								`,
+								{},
+								function(data){
+									if(document.querySelector("#nav .active").innerText === "Social" && currentFeed === "following" && onlyText_input.checked){
+										if(!data){
+											removeChildren(postContent);
+											create("div","error","Failed to connect to Anilist",postContent);
+											return
 										}
-										else{
-											if(!data){return}
-										}
-										activityCache_subsets.following_text.update(data.data.Page.activities)
+										render(data.data.Page.activities)
 									}
-								)
-							}
-							let cachedData = activityCache_subsets.following_text.retrieve();
+									else{
+										if(!data){return}
+									}
+									update_cache(data.data.Page.activities,"following_text")
+								}
+							)
+							let cachedData = retrieve_cache("following_text",25);
 							if(cachedData.length){
 								render(cachedData)
 							}
 						}
 						else{
-							if(
-								activityCache_subsets.following.nativeUpdateTime + activityCache_subsets.following.nativeUpdateTime_delta*1000
-								< (new Date()).valueOf()
-							){
-								authAPIcall(
+							authAPIcall(
 									`
 query{
 	Page(perPage: 25){
-		activities(sort: ID_DESC,isFollowing: true){
+		activities(sort: ID_DESC,isFollowing: true,type_in:[TEXT,ANIME_LIST,MANGA_LIST]){
 			... on TextActivity{
 				type
 				text
@@ -514,25 +538,24 @@ query{
 		}
 	}
 }
-									`,
-									{},
-									function(data){
-										if(document.querySelector("#nav .active").innerText === "Social" && currentFeed === "following" && !onlyText_input.checked){
-											if(!data){
-												removeChildren(postContent);
-												create("div","error","Failed to connect to Anilist",postContent);
-												return
-											}
-											render(data.data.Page.activities)
+								`,
+								{},
+								function(data){
+									if(document.querySelector("#nav .active").innerText === "Social" && currentFeed === "following" && !onlyText_input.checked){
+										if(!data){
+											removeChildren(postContent);
+											create("div","error","Failed to connect to Anilist",postContent);
+											return
 										}
-										else{
-											if(!data){return}
-										}
-										activityCache_subsets.following.update(data.data.Page.activities)
+										render(data.data.Page.activities)
 									}
-								)
-							}
-							let cachedData = activityCache_subsets.following.retrieve();
+									else{
+										if(!data){return}
+									}
+									update_cache(data.data.Page.activities,"following")
+								}
+							)
+							let cachedData = retrieve_cache("following",25);
 							if(cachedData.length){
 								render(cachedData)
 							}
@@ -543,11 +566,7 @@ query{
 						global.classList.add("active");
 						forum.classList.remove("active");
 						document.title = "sAnity - global";
-						if(
-							activityCache_subsets.global_text.nativeUpdateTime + activityCache_subsets.global_text.nativeUpdateTime_delta*1000
-							< (new Date()).valueOf()
-						){
-							generalAPIcall(
+						generalAPIcall(
 								`
 query{
 	Page(perPage: 25){
@@ -563,25 +582,24 @@ query{
 		}
 	}
 }
-								`,
-								{},
-								function(data){
-									if(document.querySelector("#nav .active").innerText === "Social" && currentFeed === "global"){
-										if(!data){
-											removeChildren(postContent)
-											create("div","error","Failed to connect to Anilist",postContent);
-											return
-										}
-										render(data.data.Page.activities)
+							`,
+							{},
+							function(data){
+								if(document.querySelector("#nav .active").innerText === "Social" && currentFeed === "global"){
+									if(!data){
+										removeChildren(postContent)
+										create("div","error","Failed to connect to Anilist",postContent);
+										return
 									}
-									else{
-										if(!data){return}
-									}
-									activityCache_subsets.global_text.update(data.data.Page.activities)
+									render(data.data.Page.activities)
 								}
-							)
-						}
-						let cachedData = activityCache_subsets.global_text.retrieve();
+								else{
+									if(!data){return}
+								}
+								update_cache(data.data.Page.activities,"global_text")
+							}
+						)
+						let cachedData = retrieve_cache("global_text",25);
 						if(cachedData.length){
 							render(cachedData)
 						}
@@ -649,7 +667,7 @@ query{
 								likes.title = activity.likes.map(user => user.name).join("\n")
 							})
 						}
-						activityCache_subsets.global_text.update(data.data.Page.activities)
+						update_cache(data.data.Page.activities,"global_text")
 					}
 				)
 			}
