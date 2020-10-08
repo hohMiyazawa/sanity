@@ -120,6 +120,7 @@ body{
 }
 .create{
 	padding: 10px;
+	width: 90%;
 }
 .create textarea{
 	width: 98%;
@@ -217,6 +218,9 @@ body{
 }
 .filter .hohCheckbox{
 	padding-left: 25px;
+}
+.feed{
+	width: 90%;
 }
 .ilink.manga{
 	color: rgb(var(--color-green));
