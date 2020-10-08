@@ -205,6 +205,22 @@ makeHtml = function(markdown){
 	return converter.makeHtml(preProcessed.join(""))
 }
 
+let relativeTime = function(time){
+	let diff = (new Date()).valueOf() - time;
+	if(diff < 60*1000){
+		return Math.round(diff/1000) + "s"
+	}
+	else if(diff < 60*60*1000){
+		return Math.round(diff/(60*1000)) + "m"
+	}
+	else if(diff < 24*60*60*1000){
+		return Math.round(diff/(60*60*1000)) + "h"
+	}
+	else{
+		return Math.round(diff/(24*60*60*1000)) + "d"
+	}
+}
+
 const globalUserCache = new Set();
 const followingUserCache = new Set();
 
@@ -445,6 +461,9 @@ document.addEventListener("mousemove",function(event){
 							user.onclick = function(){
 								updateUrl("?profile=" + activity.user.name)
 							}
+						let time = create("time",false,relativeTime(activity.createdAt*1000),item);
+						time.setAttribute("datetime",(new Date(activity.createdAt*1000)).toISOString());
+						time.title = (new Date(activity.createdAt*1000)).toLocaleString();
 						if(activity.type === "TEXT"){
 							item.classList.add("text-post");
 							let markdown = create("div","markdown",false,item);

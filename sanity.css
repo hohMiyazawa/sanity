@@ -252,3 +252,10 @@ body{
 video{
 	max-width: 100%;
 }
+.activity time{
+	position: absolute;
+	top: 5px;
+	right: 12px;
+	font-size: smaller;
+	font-weight: lighter;
+}
