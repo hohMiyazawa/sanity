@@ -299,7 +299,10 @@ const update_cache = function(activities,type,optionalName){
 			if(
 				type === "global_text"
 				|| (
-					globalUserCache.has(activity.user.name)
+					(
+						type === "global"
+						|| globalUserCache.has(activity.user.name)
+					)
 					&& activity.type === "TEXT"
 				)
 			){
@@ -317,7 +320,10 @@ const update_cache = function(activities,type,optionalName){
 			if(
 				type === "following_text"
 				|| (
-					followingUserCache.has(activity.user.name)
+					(
+						type === "following"
+						|| followingUserCache.has(activity.user.name)
+					)
 					&& activity.type === "TEXT"
 				)
 			){
