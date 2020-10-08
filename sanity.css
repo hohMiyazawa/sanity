@@ -112,6 +112,9 @@ body{
 	padding-right: 4px;
 	color: transparent;  
 	text-shadow: 0 0 0 rgb(var(--color-text));
+	min-width: 25px;
+	display: inline-block;
+	text-align: right;
 }
 .actions .likes.ILikeThis{
 	text-shadow: 0 0 0 rgb(var(--color-peach));

@@ -421,8 +421,8 @@ document.addEventListener("mousemove",function(event){
 					console.log("rendering feed!");
 					removeChildren(postContent)
 					data.forEach(activity => {
-						let postWrapper = create("div",false,false,postContent);
-						let item = create("div","post","",postWrapper);
+						let postWrap = create("div",false,false,postContent);
+						let item = create("div","post","",postWrap);
 						let header = create("div","header",false,item);
 						let user = create("span","ilink",activity.user.name,header);
 							user.onclick = function(){
@@ -460,6 +460,19 @@ document.addEventListener("mousemove",function(event){
 						}
 						let actions = create("div","actions",false,item);
 						let replies = create("span",["action","replies"],(activity.replies.length || "") + "💬",actions);
+						let replyWrap = null;
+						replies.onclick = function(){
+							if(replyWrap){
+								removeChildren(replyWrap);
+								replyWrap = null
+							}
+							else{
+								replyWrap = create("div","replies",false,postWrap);
+								activity.replies.forEach(reply => {
+									create("div","reply",reply.user.name,replyWrap)
+								})
+							}
+						}
 						let likes = create("span",["action","likes"],(activity.likes.length || "") + "♥️",actions);
 						if(activity.likes.some(like => like.name === settings.me.name)){
 							likes.classList.add("ILikeThis")
