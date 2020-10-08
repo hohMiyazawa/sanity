@@ -108,15 +108,19 @@ body{
 }
 .actions .action{
 	cursor: pointer;
+	padding-left: 4px;
+	padding-right: 4px;
+	color: transparent;  
+	text-shadow: 0 0 0 rgb(var(--color-text));
 }
 .actions .likes.ILikeThis{
-	color: rgb(var(--color-peach));
+	text-shadow: 0 0 0 rgb(var(--color-peach));
 }
 .actions .likes:hover{
-	color: rgb(var(--color-peach));
+	text-shadow: 0 0 0 rgb(var(--color-peach));
 }
 .actions .likes.ILikeThis:hover{
-	color: rgb(var(--color-text));
+	text-shadow: 0 0 0 rgb(var(--color-text));
 }
 .create{
 	padding: 10px;

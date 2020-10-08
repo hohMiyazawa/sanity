@@ -421,7 +421,8 @@ document.addEventListener("mousemove",function(event){
 					console.log("rendering feed!");
 					removeChildren(postContent)
 					data.forEach(activity => {
-						let item = create("div","post","",postContent);
+						let postWrapper = create("div",false,false,postContent);
+						let item = create("div","post","",postWrapper);
 						let header = create("div","header",false,item);
 						let user = create("span","ilink",activity.user.name,header);
 							user.onclick = function(){
@@ -458,11 +459,12 @@ document.addEventListener("mousemove",function(event){
 							}
 						}
 						let actions = create("div","actions",false,item);
+						let replies = create("span",["action","replies"],(activity.replies.length || "") + "💬",actions);
 						let likes = create("span",["action","likes"],(activity.likes.length || "") + "♥️",actions);
 						if(activity.likes.some(like => like.name === settings.me.name)){
 							likes.classList.add("ILikeThis")
 						}
-						likes.title = activity.likes.map(user => user.name).join("\n")
+						likes.title = activity.likes.map(user => user.name).join("\n");
 					})
 				}
 				let updateMode = function(newFeed){
@@ -479,12 +481,19 @@ query{
 	Page(perPage: 25){
 		activities(sort: ID_DESC,type: TEXT,isFollowing: true){
 			... on TextActivity{
+				id
 				type
+				createdAt
 				text
 				user{name}
 				likes{name}
-				id
-				createdAt
+				replies{
+					id
+					createdAt
+					text
+					user{name}
+					likes{name}
+				}
 			}
 		}
 	}
@@ -518,22 +527,36 @@ query{
 	Page(perPage: 25){
 		activities(sort: ID_DESC,isFollowing: true,type_in:[TEXT,ANIME_LIST,MANGA_LIST]){
 			... on TextActivity{
+				id
 				type
+				createdAt
 				text
 				user{name}
 				likes{name}
-				id
-				createdAt
+				replies{
+					id
+					createdAt
+					text
+					user{name}
+					likes{name}
+				}
 			}
 			... on ListActivity{
+				id
 				type
+				createdAt
 				user{name}
 				likes{name}
 				media{title{romaji}}
 				progress
 				status
-				id
-				createdAt
+				replies{
+					id
+					createdAt
+					text
+					user{name}
+					likes{name}
+				}
 			}
 		}
 	}
@@ -572,12 +595,19 @@ query{
 	Page(perPage: 25){
 		activities(sort: ID_DESC,type: TEXT){
 			... on TextActivity{
+				id
 				type
+				createdAt
 				text
 				user{name}
 				likes{name}
-				id
-				createdAt
+				replies{
+					id
+					createdAt
+					text
+					user{name}
+					likes{name}
+				}
 			}
 		}
 	}
@@ -667,7 +697,7 @@ query{
 								likes.title = activity.likes.map(user => user.name).join("\n")
 							})
 						}
-						update_cache(data.data.Page.activities,"global_text")
+						//update_cache(data.data.Page.activities,"global_text")
 					}
 				)
 			}
