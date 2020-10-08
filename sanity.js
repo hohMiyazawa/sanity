@@ -165,17 +165,24 @@ makeHtml = function(markdown){
 	centerSplit = centerSplit.map(component => {
 		let images = component.match(imgRegex);
 		if(images){
-
 			images.forEach(image => {
 				let imageParts = image.match(/^img(\d+%?)?\((.+?)\)$/i);
 				component = component.replace(image,`<img width="${imageParts[1] || ""}" src="${imageParts[2]}">`)
 			})
-			return component
 		}
-		else{
-			return component
+		return component
+	});
+	let webmRegex = /webm(\d+%?)?\(.+?\)/gi;
+	centerSplit = centerSplit.map(component => {
+		let videos = component.match(webmRegex);
+		if(videos){
+			videos.forEach(video => {
+				let videoParts = video.match(/^webm\((.+?)\)$/i);
+				component = component.replace(video,`<video controls="" muted="" loop=""><source src="${videoParts[1]}" type="video/webm"></video>`)
+			})
 		}
-	})
+		return component
+	});
 	let preProcessed = [centerSplit[0]];
 	let openCenter = false;
 	for(let i=1;i<centerSplit.length;i++){

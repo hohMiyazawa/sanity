@@ -249,3 +249,6 @@ body{
 	margin: 3px;
 	position: relative;
 }
+video{
+	max-width: 100%;
+}
