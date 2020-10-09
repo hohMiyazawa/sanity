@@ -73,6 +73,7 @@ function saveAs(data,fileName,pureText){
 
 const nav = document.getElementById("nav");
 const content = document.getElementById("mainpan");
+const sidebar = document.getElementById("sidebar");
 
 const locations = create("div","locations",null,nav);
 
@@ -464,8 +465,16 @@ query{
 			}
 		}
 	}
+}`;
+
+let occupy_sidebar = function(title){
+	removeChildren(sidebar);
+	let fullScreenApp = create("div","sidebarApp",false,sidebar);
+	let appHeader = create("div","app-header",false,fullScreenApp);
+	create("h3","title",title,appHeader);
+	let appContent = create("div",false,false,fullScreenApp);
+	return appContent
 }
-`
 
 if(/#access_token/.test(document.URL)){
 	let tokenList = location.hash.split("&").map(a => a.split("="));
@@ -1139,6 +1148,7 @@ fragment mediaListEntry on MediaList{
 		location.action()
 	}
 });
+
 if(settings.accessToken){
 	let notificationMenu = create("div",["notifications","ilink"],false,nav);
 	create("span","label","Notifications",notificationMenu);
@@ -1156,9 +1166,48 @@ query{
 				if(!data){
 					return
 				}
-				notificationCount.innerText = data.data.Viewer.unreadNotificationCount || "";
-				console.log(data)
+				notificationCount.innerText = data.data.Viewer.unreadNotificationCount || ""
 			}
 		)
 	};callNots();
+	notificationMenu.onclick = function(){
+		let sidebarApp = occupy_sidebar("Notifications");
+		sidebarApp.innerText = "loading...";
+		authAPIcall(
+`
+query{
+	Page(perPage: 25){
+		notifications{
+... on AiringNotification{id type}
+... on FollowingNotification{id type}
+... on ActivityMessageNotification{id type}
+... on ActivityMentionNotification{id type}
+... on ActivityReplyNotification{id type}
+... on ActivityReplySubscribedNotification{id type}
+... on ActivityLikeNotification{id type user{name}}
+... on ActivityReplyLikeNotification{id type}
+... on ThreadCommentMentionNotification{id type}
+... on ThreadCommentReplyNotification{id type}
+... on ThreadCommentSubscribedNotification{id type}
+... on ThreadCommentLikeNotification{id type}
+... on ThreadLikeNotification{id type}
+... on RelatedMediaAdditionNotification{id type}
+		}
+	}
+}`,
+			{},
+			function(data){
+				sidebarApp.innerText = "";
+				data.data.Page.notifications.forEach(notification => {
+					let noti = create("div","notification",false,sidebarApp);
+					if(notification.type === "ACTIVITY_LIKE"){
+						noti.innerText = notification.user.name + " liked your activity"
+					}
+					else{
+						noti.innerText = notification.type
+					}
+				})
+			}
+		)
+	}
 }
