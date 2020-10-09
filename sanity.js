@@ -570,7 +570,7 @@ document.addEventListener("mousemove",function(event){
 						replies.onclick = function(){
 							postWrap.classList.toggle("replies-open");
 							if(replyWrap){
-								removeChildren(replyWrap);
+								replyWrap.parentNode.removeChild(replyWrap);
 								replyWrap = null
 							}
 							else{
@@ -589,7 +589,26 @@ document.addEventListener("mousemove",function(event){
 									if(reply.likes.some(like => like.name === settings.me.name)){
 										likes.classList.add("ILikeThis")
 									}
-									likes.title = reply.likes.map(user => user.name).join("\n")
+									likes.title = reply.likes.map(user => user.name).join("\n");
+									likes.onclick = function(){
+										let meIndex = reply.likes.findIndex(like => like.name === settings.me.name);
+										if(meIndex === -1){
+											reply.likes.push({name: settings.me.name})
+										}
+										else{
+											reply.likes.splice(meIndex,1)
+										};
+										likes.classList.toggle("ILikeThis");
+										likes.innerText = (activity.likes.length || "") + "♥️";
+										authAPIcall(
+											"mutation($id:Int){ToggleLike(id:$id,type:ACTIVITY_REPLY){id}}",
+											{id: reply.id},
+											data => {if(!data){
+												console.log("like failed!");
+												likes.classList.toggle("ILikeThis")
+											}}
+										)
+									}
 								})
 							}
 						}
