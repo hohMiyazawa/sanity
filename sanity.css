@@ -27,7 +27,7 @@ body{
 	margin-bottom: 100px;
 	height: 100%;
 	margin-left: 5%;
-	margin-right: 5%;
+	margin-right: 2%;
 	display: flex;
 }
 .column{
@@ -280,4 +280,18 @@ video{
 .button:disabled{
 	opacity: 0.5;
 	cursor: default;
+}
+.notifications{
+	position: absolute;
+	color: rgb(var(--max-contrast));
+	top: 5px;
+	right: 30px;
+	min-width: 120px;
+	text-align: left;
+}
+#nav .notifications .count{
+	display: inline;
+	background: rgb(var(--color-peach));
+	margin: 2px;
+	border-radius: 2px;
 }

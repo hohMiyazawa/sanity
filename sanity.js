@@ -49,6 +49,14 @@ function removeChildren(node){
 	}
 }
 
+const icons = {
+	heart: "♥️",
+	talk: "💬",
+	envelope : "✉",
+	cross : "✕",
+	like : "♥"
+}
+
 function saveAs(data,fileName,pureText){
 	//todo: support for browsers without blobs?
 	let link = create("a");
@@ -193,6 +201,17 @@ makeHtml = function(markdown){
 			videos.forEach(video => {
 				let videoParts = video.match(/^webm\((.+?)\)$/i);
 				component = component.replace(video,`<video controls="" muted="" loop=""><source src="${videoParts[1]}" type="video/webm"></video>`)
+			})
+		}
+		return component
+	});
+	let youtubeRegex = /youtube\(.+?\)/gi;
+	centerSplit = centerSplit.map(component => {
+		let videos = component.match(youtubeRegex);
+		if(videos){
+			videos.forEach(video => {
+				let videoParts = video.match(/^youtube\((.+?)\)$/i);
+				component = component.replace(video,`<a href="${videoParts[1]}">${videoParts[1]}</a>`)
 			})
 		}
 		return component
@@ -617,7 +636,7 @@ document.addEventListener("mousemove",function(event){
 									let markdown = create("div","markdown",false,replyDiv);
 										markdown.innerHTML = makeHtml(reply.text);
 									let replyActions = create("div","actions",false,replyDiv);
-									let likes = create("span",["action","likes"],(reply.likes.length || "") + "♥️",replyActions);
+									let likes = create("span",["action","likes"],(reply.likes.length || "") + icons.like,replyActions);
 									if(reply.likes.some(like => like.name === settings.me.name)){
 										likes.classList.add("ILikeThis")
 									}
@@ -631,7 +650,7 @@ document.addEventListener("mousemove",function(event){
 											reply.likes.splice(meIndex,1)
 										};
 										likes.classList.toggle("ILikeThis");
-										likes.innerText = (activity.likes.length || "") + "♥️";
+										likes.innerText = (activity.likes.length || "") + icons.like;
 										authAPIcall(
 											"mutation($id:Int){ToggleLike(id:$id,type:ACTIVITY_REPLY){id}}",
 											{id: reply.id},
@@ -644,7 +663,7 @@ document.addEventListener("mousemove",function(event){
 								})
 							}
 						}
-						let likes = create("span",["action","likes"],(activity.likes.length || "") + "♥️",actions);
+						let likes = create("span",["action","likes"],(activity.likes.length || "") + icons.like,actions);
 						if(activity.likes.some(like => like.name === settings.me.name)){
 							likes.classList.add("ILikeThis")
 						}
@@ -658,7 +677,7 @@ document.addEventListener("mousemove",function(event){
 								activity.likes.splice(meIndex,1)
 							};
 							likes.classList.toggle("ILikeThis");
-							likes.innerText = (activity.likes.length || "") + "♥️";
+							likes.innerText = (activity.likes.length || "") + icons.like;
 							authAPIcall(
 								"mutation($id:Int){ToggleLike(id:$id,type:ACTIVITY){id}}",
 								{id: activity.id},
@@ -1120,3 +1139,26 @@ fragment mediaListEntry on MediaList{
 		location.action()
 	}
 });
+if(settings.accessToken){
+	let notificationMenu = create("div",["notifications","ilink"],false,nav);
+	create("span","label","Notifications",notificationMenu);
+	let notificationCount = create("div","count",false,notificationMenu);
+	let callNots = function(){
+		authAPIcall(
+`
+query{
+	Viewer{
+		unreadNotificationCount
+	}
+}`,
+			{},
+			function(data){
+				if(!data){
+					return
+				}
+				notificationCount.innerText = data.data.Viewer.unreadNotificationCount || "";
+				console.log(data)
+			}
+		)
+	};callNots();
+}
