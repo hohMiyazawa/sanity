@@ -49,6 +49,20 @@ function removeChildren(node){
 	}
 }
 
+function saveAs(data,fileName,pureText){
+	//todo: support for browsers without blobs?
+	let link = create("a");
+	document.body.appendChild(link);
+	let json = pureText ? data : JSON.stringify(data);
+	let blob = new Blob([json],{type: "octet/stream"});
+	let url = window.URL.createObjectURL(blob);
+	link.href = url;
+	link.download = fileName || "File from Anilist.co";
+	link.click();
+	window.URL.revokeObjectURL(url);
+	document.body.removeChild(link);
+}
+
 const nav = document.getElementById("nav");
 const content = document.getElementById("mainpan");
 
@@ -389,12 +403,56 @@ let updateUrl = function(place){
 	history.pushState({}, null, place)
 }
 
+const basicInfo = `
+query{
+	Viewer{
+		id
+		name
+		options{
+			titleLanguage
+			displayAdultContent
+			airingNotifications
+			profileColor
+		}
+		mediaListOptions{
+			scoreFormat
+			rowOrder
+			animeList{
+				sectionOrder
+				splitCompletedSectionByFormat
+				customLists
+				advancedScoring
+				advancedScoringEnabled
+				theme
+			}
+			mangaList{
+				sectionOrder
+				splitCompletedSectionByFormat
+				customLists
+				advancedScoring
+				advancedScoringEnabled
+				theme
+			}
+		}
+	}
+}
+`
+
 if(/#access_token/.test(document.URL)){
 	let tokenList = location.hash.split("&").map(a => a.split("="));
 	settings.accessToken = tokenList[0][1];
 	saveSettings();
 	updateUrl("");
-	authAPIcall(`query{Viewer{id name}}`,{},function(data){
+	authAPIcall(basicInfo,{},function(data){
+		if(!data){
+			return
+		}
+		settings.me = data.data.Viewer;
+		saveSettings()
+	})
+}
+if(!settings.me){
+	authAPIcall(basicInfo,{},function(data){
 		if(!data){
 			return
 		}
@@ -953,7 +1011,7 @@ fragment mediaListEntry on MediaList{
 			saveButton.onclick = function(){
 				settings.accessToken = accessTokenField.value;
 				saveSettings();
-				authAPIcall(`query{Viewer{id name}}`,{},function(data){
+				authAPIcall(basicInfo,{},function(data){
 					if(!data){
 						create("p","error","Failed to verify token",content);
 						return
@@ -961,6 +1019,15 @@ fragment mediaListEntry on MediaList{
 					settings.me = data.data.Viewer;
 					saveSettings();
 				})
+			}
+			create("hr","divider",false,content);
+			let exportButton = create("button","button","Export settings",content);
+			let importButton = create("button","button","Import settings",content);
+			exportButton.onclick = function(){
+				saveAs(settings,"sanity settings for " + settings.me.name + ".json")
+			};
+			importButton.onclick = function(){
+				alert("not implemented")
 			}
 		}
 	}
