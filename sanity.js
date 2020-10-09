@@ -1167,6 +1167,10 @@ let viewSingleActivity = function(id){
 	updateUrl("?activity=" + id);
 }
 
+let viewSingleUser = function(name){
+	updateUrl("?profile=" + name);
+}
+
 if(settings.accessToken){
 	let notificationMenu = create("div",["notifications","ilink"],false,nav);
 	create("span","label","Notifications",notificationMenu);
@@ -1248,26 +1252,33 @@ query{
 		let sidebarApp = occupy_sidebar("Notifications");
 		notsData.data.Page.notifications.forEach((notification,index) => {
 			let noti = create("div","notification",false,sidebarApp);
+			if(notification.user){
+				let userLink = create("span","ilink",notification.user.name,noti);
+				userLink.onclick = function(){
+					viewSingleUser(notification.user.name)
+				}
+			}
 			if(notification.type === "ACTIVITY_LIKE"){
-				noti.innerText = notification.user.name + " liked your ";
+				create("span",false," liked your ",noti);
 				let activityLink = create("span","ilink","activity",noti);
 				if(notification.activity.type === "TEXT"){
 					activityLink.innerText = "status";
 					let cacheItem = activity_map.get(notification.activity.id);
-					console.log(notification.activity.id,cacheItem);
 					if(cacheItem){
-						create("span",false," [" + extractKeywords(cacheItem.activity.text)[0] + "]",noti);
+						create("span",false," [" + extractKeywords(cacheItem.activity.text)[0] + "]",noti)
 					}
+				}
+				if(notification.activity.type === "MANGA_LIST"){
+					activityLink.classList.add("manga")
 				}
 			}
 			else if(notification.type === "ACTIVITY_REPLY_LIKE"){
-				noti.innerText = notification.user.name + " liked your ";
+				create("span",false," liked your ",noti);
 				let activityLink = create("span","ilink","reply",noti);
 				if(notification.activity.type === "TEXT"){
 					let cacheItem = activity_map.get(notification.activity.id);
-					console.log(notification.activity.id,cacheItem);
 					if(cacheItem){
-						create("span",false," [" + extractKeywords(cacheItem.activity.text)[0] + "]",noti);
+						create("span",false," [" + extractKeywords(cacheItem.activity.text)[0] + "]",noti)
 					}
 				}
 			}
@@ -1275,7 +1286,7 @@ query{
 				noti.innerText = notification.type
 			}
 			if((index + 1) === notsData.data.Viewer.unreadNotificationCount){
-				create("hr","divider",false,sidebarApp);
+				create("hr","divider",false,sidebarApp)
 			}
 		})
 	}
