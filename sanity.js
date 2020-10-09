@@ -190,7 +190,12 @@ makeHtml = function(markdown){
 		if(images){
 			images.forEach(image => {
 				let imageParts = image.match(/^img(\d+%?)?\((.+?)\)$/i);
-				component = component.replace(image,`<img width="${imageParts[1] || ""}" src="${imageParts[2]}">`)
+				if(settings.displayImages){
+					component = component.replace(image,`<img width="${imageParts[1] || ""}" src="${imageParts[2]}">`)
+				}
+				else{
+					component = component.replace(image,`[IMG]<a data-size="${imageParts[1] || ""}" class="supressed-image" href="${imageParts[2]}">${imageParts[2]}</a>`)
+				}
 			})
 		}
 		return component
@@ -201,7 +206,12 @@ makeHtml = function(markdown){
 		if(videos){
 			videos.forEach(video => {
 				let videoParts = video.match(/^webm\((.+?)\)$/i);
-				component = component.replace(video,`<video controls="" muted="" loop=""><source src="${videoParts[1]}" type="video/webm"></video>`)
+				if(settings.displayVideos){
+					component = component.replace(video,`<video controls="" ${settings.muteVideos ? 'muted=""' : ''} ${settings.autoplayVideos ? 'autoplay=""' : ''} loop=""><source src="${videoParts[1]}" type="video/webm"></video>`)
+				}
+				else{
+					component = component.replace(video,`[VID]<a class="supressed-video" href="${videoParts[1]}">${videoParts[1]}</a>`)
+				}
 			})
 		}
 		return component
@@ -414,6 +424,10 @@ let defaultSettings = {
 	greenManga: true,
 	isTextFeed: true,
 	hasRepliesFeed: false,
+	displayImages: true,
+	displayVideos: true,
+	autoplayVideos: false,
+	muteVideos: true,
 	cacheDelays: {
 		replyHover: 10*60*1000,
 		replyClick: 1*60*1000,
@@ -1138,6 +1152,23 @@ fragment mediaListEntry on MediaList{
 					saveSettings();
 				})
 			}
+
+			let createCheckboxSetting = function(setting,description){
+				let setting_container = create("p","setting",false,content);
+				let checkbox = createCheckbox(setting_container,false,settings[setting]);
+				create("span","label",description,setting_container);
+				checkbox.oninput = function(){
+					settings[setting] = checkbox.checked;
+					saveSettings()
+				}
+			}
+
+			create("hr","divider",false,content);
+			create("h3",false,"Media settings",content);
+			createCheckboxSetting("displayImages","Embed feed images");
+			createCheckboxSetting("displayVideos","Embed feed videos");
+			createCheckboxSetting("autoplayVideos","Autoplay videos");
+			createCheckboxSetting("muteVideos","Mute videos");
 			create("hr","divider",false,content);
 			let exportButton = create("button","button","Export settings",content);
 			let importButton = create("button","button","Import settings",content);
