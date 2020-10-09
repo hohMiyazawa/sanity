@@ -255,9 +255,9 @@ function extractKeywords(text,number){
 	let sorted = words.sort((b,a) =>
 		(words.filter(v => v === a).length
 		- words.filter(v => v === b).length)
-		|| a[0].localeCompare(b[0])
+		|| (a === a.toUpperCase()) - (b === b.toUpperCase())
 	).filter(
-		word => !["in","the","it","is","are","I","I'm","you"].includes(word)
+		word => !["in","the","it","It's","is","are","I","I'm","you","with","for"].includes(word) && word.length < 30
 	)
 	return sorted.slice(0,number)
 }
@@ -1169,6 +1169,8 @@ let viewSingleActivity = function(id){
 
 let viewSingleUser = function(name){
 	updateUrl("?profile=" + name);
+	removeChildren(content);
+	let profileInfo = create("div",false,"Profile of " + name,content)
 }
 
 if(settings.accessToken){
@@ -1190,8 +1192,34 @@ query{
 ... on FollowingNotification{id type}
 ... on ActivityMessageNotification{id type}
 ... on ActivityMentionNotification{id type}
-... on ActivityReplyNotification{id type}
-... on ActivityReplySubscribedNotification{id type}
+... on ActivityReplyNotification{
+	id type user{name}
+	activity{
+... on TextActivity{
+	id
+	type
+}
+... on ListActivity{
+	id
+	type
+	progress
+}
+	}
+}
+... on ActivityReplySubscribedNotification{
+	id type user{name}
+	activity{
+... on TextActivity{
+	id
+	type
+}
+... on ListActivity{
+	id
+	type
+	progress
+}
+	}
+}
 ... on ActivityLikeNotification{
 	id type user{name}
 	activity{
@@ -1276,6 +1304,28 @@ query{
 				create("span",false," liked your ",noti);
 				let activityLink = create("span","ilink","reply",noti);
 				if(notification.activity.type === "TEXT"){
+					let cacheItem = activity_map.get(notification.activity.id);
+					if(cacheItem){
+						create("span",false," [" + extractKeywords(cacheItem.activity.text)[0] + "]",noti)
+					}
+				}
+			}
+			else if(notification.type === "ACTIVITY_REPLY_SUBSCRIBED"){
+				create("span",false," replied to subscribed ",noti);
+				let activityLink = create("span","ilink","activity",noti);
+				if(notification.activity.type === "TEXT"){
+					activityLink.innerText = "status";
+					let cacheItem = activity_map.get(notification.activity.id);
+					if(cacheItem){
+						create("span",false," [" + extractKeywords(cacheItem.activity.text)[0] + "]",noti)
+					}
+				}
+			}
+			else if(notification.type === "ACTIVITY_REPLY"){
+				create("span",false," replied to your ",noti);
+				let activityLink = create("span","ilink","activity",noti);
+				if(notification.activity.type === "TEXT"){
+					activityLink.innerText = "status";
 					let cacheItem = activity_map.get(notification.activity.id);
 					if(cacheItem){
 						create("span",false," [" + extractKeywords(cacheItem.activity.text)[0] + "]",noti)
