@@ -219,6 +219,16 @@ makeHtml = function(markdown){
 	return converter.makeHtml(preProcessed.join(""))
 }
 
+function emojiSanitize(string){
+	return Array.from(string).map(char => {
+		let codePoint = char.codePointAt(0);
+		if(codePoint > 0xFFFF){
+			return "&#" + codePoint + ";"
+		}
+		return char
+	}).join("")
+}
+
 let relativeTime = function(time){
 	let diff = (new Date()).valueOf() - time;
 	if(diff < 60*1000){
@@ -521,6 +531,21 @@ document.addEventListener("mousemove",function(event){
 				let preview = create("div",["preview","markdown"],false,createPost);
 					createText.oninput = function(){
 						preview.innerHTML = makeHtml(createText.value)
+					}
+					cancelButton.onclick = function(){
+						createText.value = "";
+						preview.innerHTML = "";
+					}
+					publishButton.onclick = function(){
+						authAPIcall(
+							`mutation($text: String){SaveTextActivity(text: $text){id}}`,
+							{text: emojiSanitize(createText.value)},
+							function(data){
+								createText.value = "";
+								preview.innerHTML = "";
+								updateMode(currentFeed)
+							}
+						)
 					}
 
 				let postContent = create("div","feed",false,content);
