@@ -221,10 +221,14 @@ let relativeTime = function(time){
 	}
 }
 
+let personalAnimeList = null;
+let personalMangaList = null;
+
 const globalUserCache = new Set();
 const followingUserCache = new Set();
 
 const mediaCache = new Map();
+const entryCache = new Map();
 
 const activity_map = new Map();
 
@@ -801,12 +805,115 @@ query{
 		name: "Anime",
 		action: function(){
 			updateUrl("?anime");
+			removeChildren(content);
+			if(settings.accessToken){
+				let renderList = function(){
+					removeChildren(content);
+					let listArea = create("div","list-area",false,content);
+					personalAnimeList.forEach(list => {
+						let listWrap = create("div","list-wrap",false,listArea);
+						create("h3","section-name",list.name,listWrap);
+						let listSection = create("div","list-section",false,listWrap);
+						let listHead = create("div","list-head",false,listSection);
+						let listEntries = create("div","list-entries",false,listSection);
+						list.entries.forEach(entry => {
+							let entryRow = create("div","entry",mediaCache.get(entry).title.romaji,listEntries);
+						})
+					})
+				}
+				if(personalAnimeList){
+					renderList()
+				}
+				else{
+					let loader = create("div",false,"loading list...",content)
+					authAPIcall(
+`
+query($name: String!){
+	MediaListCollection(userName: $name, type: ANIME){
+		lists{
+			name
+			isCustomList
+			entries{
+				... mediaListEntry
+			}
+		}
+	}
+}
+
+fragment mediaListEntry on MediaList{
+	mediaId
+	status
+	progress
+	repeat
+	notes
+	startedAt{
+		year
+		month
+		day
+	}
+	media{
+		episodes
+		duration
+		nextAiringEpisode{episode}
+		format
+		title{romaji native english}
+		tags{name}
+		genres
+		meanScore
+		studios{nodes{isAnimationStudio id name}}
+	}
+	scoreRaw: score(format: POINT_100)
+}`,
+						{name: settings.me.name},
+						function(data){
+							if(!data){
+								loader.innerText = "failed to load list";
+								console.log("failed to load list");
+								return
+							}
+							personalAnimeList = [];
+							data.data.MediaListCollection.lists.forEach(list => {
+								let listEntry = {
+									name: list.name,
+									isCustomList: list.isCustomList,
+									entries: []
+								};
+								list.entries.forEach(entry => {
+									mediaCache.set(entry.mediaId,entry.media);
+									entryCache.set(entry.mediaId,{
+										status: entry.status,
+										progress: entry.progress,
+										type: "ANIME",
+										repeat: entry.repeat,
+										notes: entry.notes,
+										startedAt: entry.startedAt,
+										media: entry.mediaId,
+										scoreRaw: entry.scoreRaw
+									});
+									listEntry.entries.push(entry.mediaId)
+								});
+								personalAnimeList.push(listEntry)
+							});
+							renderList()
+						}
+					)
+				}
+			}
+			else{
+				create("div","error","You are not signed in. Go to 'settings' for login options",content);
+			}
 		}
 	},
 	{
 		name: "Manga",
 		action: function(){
 			updateUrl("?manga");
+			removeChildren(content);
+			if(settings.accessToken){
+			}
+			else{
+				create("div","error","You are not signed in. Go to 'settings' for login options",content);
+			}
 		}
 	},
 	{
