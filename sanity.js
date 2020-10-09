@@ -190,8 +190,11 @@ makeHtml = function(markdown){
 		if(images){
 			images.forEach(image => {
 				let imageParts = image.match(/^img(\d+%?)?\((.+?)\)$/i);
-				if(settings.displayImages){
+				if(settings.displayImages && (settings.displayGifs || !imageParts[2].match(/\.gif$/i))){
 					component = component.replace(image,`<img width="${imageParts[1] || ""}" src="${imageParts[2]}">`)
+				}
+				else if(!settings.displayGifs && imageParts[2].match(/\.gif$/i)){
+					component = component.replace(image,`[GIF]<a data-size="${imageParts[1] || ""}" class="supressed-image" href="${imageParts[2]}">${imageParts[2]}</a>`)
 				}
 				else{
 					component = component.replace(image,`[IMG]<a data-size="${imageParts[1] || ""}" class="supressed-image" href="${imageParts[2]}">${imageParts[2]}</a>`)
@@ -207,7 +210,7 @@ makeHtml = function(markdown){
 			videos.forEach(video => {
 				let videoParts = video.match(/^webm\((.+?)\)$/i);
 				if(settings.displayVideos){
-					component = component.replace(video,`<video controls="" ${settings.muteVideos ? 'muted=""' : ''} ${settings.autoplayVideos ? 'autoplay=""' : ''} loop=""><source src="${videoParts[1]}" type="video/webm"></video>`)
+					component = component.replace(video,`<video controls="" ${settings.muteVideos ? 'muted=""' : ''} ${settings.autoplayVideos ? 'autoplay=""' : ''} loop="" style="max-width: ${settings.videoMaxwidth}%"><source src="${videoParts[1]}" type="video/webm"></video>`)
 				}
 				else{
 					component = component.replace(video,`[VID]<a class="supressed-video" href="${videoParts[1]}">${videoParts[1]}</a>`)
@@ -425,9 +428,11 @@ let defaultSettings = {
 	isTextFeed: true,
 	hasRepliesFeed: false,
 	displayImages: true,
+	displayGifs: true,
 	displayVideos: true,
 	autoplayVideos: false,
 	muteVideos: true,
+	videoMaxwidth: 80,
 	cacheDelays: {
 		replyHover: 10*60*1000,
 		replyClick: 1*60*1000,
@@ -1166,9 +1171,20 @@ fragment mediaListEntry on MediaList{
 			create("hr","divider",false,content);
 			create("h3",false,"Media settings",content);
 			createCheckboxSetting("displayImages","Embed feed images");
+			createCheckboxSetting("displayGifs","Embed feed gifs");
 			createCheckboxSetting("displayVideos","Embed feed videos");
 			createCheckboxSetting("autoplayVideos","Autoplay videos");
 			createCheckboxSetting("muteVideos","Mute videos");
+			let videoMaxwidth = create("input",false,false,content,"width: 50px");
+			videoMaxwidth.type = "number";
+			videoMaxwidth.max = 100;
+			videoMaxwidth.min = 0;
+			videoMaxwidth.value = settings.videoMaxwidth;
+			videoMaxwidth.oninput = function(){
+				settings.videoMaxwidth = parseFloat(videoMaxwidth.value);
+				saveSettings()
+			}
+			create("span","label","% Video max width",content);
 			create("hr","divider",false,content);
 			let exportButton = create("button","button","Export settings",content);
 			let importButton = create("button","button","Import settings",content);
