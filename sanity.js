@@ -249,6 +249,19 @@ function emojiSanitize(string){
 	}).join("")
 }
 
+function extractKeywords(text,number){
+	number = number || 1;
+	let words = text.split(" ");
+	let sorted = words.sort((b,a) =>
+		(words.filter(v => v === a).length
+		- words.filter(v => v === b).length)
+		|| a[0].localeCompare(b[0])
+	).filter(
+		word => !["in","the","it","is","are","I","I'm","you"].includes(word)
+	)
+	return sorted.slice(0,number)
+}
+
 let relativeTime = function(time){
 	let diff = (new Date()).valueOf() - time;
 	if(diff < 60*1000){
@@ -1107,6 +1120,7 @@ fragment mediaListEntry on MediaList{
 			}
 			create("a","newTab","Github pages client",content).href = "https://anilist.co/api/v2/oauth/authorize?client_id=4168&response_type=token";
 			create("p",false,"If the selected client redirects to a different instance of sAnity, you will have to copy-paste the access token into the field below:",content);
+			create("p",false,"(If you're using Automail v9.96.3+, you can also grab an access token from the bottom of its settings page. sAnity will then use the same login as Automail)",content);
 			let accessTokenField = create("textarea",false,false,content,"display: block");
 			accessTokenField.rows = 3;
 			accessTokenField.cols = 30;
@@ -1149,10 +1163,16 @@ fragment mediaListEntry on MediaList{
 	}
 });
 
+let viewSingleActivity = function(id){
+	updateUrl("?activity=" + id);
+}
+
 if(settings.accessToken){
 	let notificationMenu = create("div",["notifications","ilink"],false,nav);
 	create("span","label","Notifications",notificationMenu);
 	let notificationCount = create("div","count",false,notificationMenu);
+	let notsData;
+	let renderRequest = false;
 	let callNots = function(){
 		authAPIcall(
 `
@@ -1160,22 +1180,6 @@ query{
 	Viewer{
 		unreadNotificationCount
 	}
-}`,
-			{},
-			function(data){
-				if(!data){
-					return
-				}
-				notificationCount.innerText = data.data.Viewer.unreadNotificationCount || ""
-			}
-		)
-	};callNots();
-	notificationMenu.onclick = function(){
-		let sidebarApp = occupy_sidebar("Notifications");
-		sidebarApp.innerText = "loading...";
-		authAPIcall(
-`
-query{
 	Page(perPage: 25){
 		notifications{
 ... on AiringNotification{id type}
@@ -1184,8 +1188,34 @@ query{
 ... on ActivityMentionNotification{id type}
 ... on ActivityReplyNotification{id type}
 ... on ActivityReplySubscribedNotification{id type}
-... on ActivityLikeNotification{id type user{name}}
-... on ActivityReplyLikeNotification{id type}
+... on ActivityLikeNotification{
+	id type user{name}
+	activity{
+... on TextActivity{
+	id
+	type
+}
+... on ListActivity{
+	id
+	type
+	progress
+}
+	}
+}
+... on ActivityReplyLikeNotification{
+	id type user{name}
+	activity{
+... on TextActivity{
+	id
+	type
+}
+... on ListActivity{
+	id
+	type
+	progress
+}
+	}
+}
 ... on ThreadCommentMentionNotification{id type}
 ... on ThreadCommentReplyNotification{id type}
 ... on ThreadCommentSubscribedNotification{id type}
@@ -1197,17 +1227,56 @@ query{
 }`,
 			{},
 			function(data){
-				sidebarApp.innerText = "";
-				data.data.Page.notifications.forEach(notification => {
-					let noti = create("div","notification",false,sidebarApp);
-					if(notification.type === "ACTIVITY_LIKE"){
-						noti.innerText = notification.user.name + " liked your activity"
-					}
-					else{
-						noti.innerText = notification.type
-					}
-				})
+				if(!data){
+					return
+				}
+				notificationCount.innerText = data.data.Viewer.unreadNotificationCount || "";
+				notsData = data;
+				console.log(data);
+				if(renderRequest){
+					renderRequest = false;
+					notificationMenu.click()
+				}
 			}
 		)
+	};callNots();
+	notificationMenu.onclick = function(){
+		if(!notsData){
+			renderRequest = true;
+			return
+		}
+		let sidebarApp = occupy_sidebar("Notifications");
+		notsData.data.Page.notifications.forEach((notification,index) => {
+			let noti = create("div","notification",false,sidebarApp);
+			if(notification.type === "ACTIVITY_LIKE"){
+				noti.innerText = notification.user.name + " liked your ";
+				let activityLink = create("span","ilink","activity",noti);
+				if(notification.activity.type === "TEXT"){
+					activityLink.innerText = "status";
+					let cacheItem = activity_map.get(notification.activity.id);
+					console.log(notification.activity.id,cacheItem);
+					if(cacheItem){
+						create("span",false," [" + extractKeywords(cacheItem.activity.text)[0] + "]",noti);
+					}
+				}
+			}
+			else if(notification.type === "ACTIVITY_REPLY_LIKE"){
+				noti.innerText = notification.user.name + " liked your ";
+				let activityLink = create("span","ilink","reply",noti);
+				if(notification.activity.type === "TEXT"){
+					let cacheItem = activity_map.get(notification.activity.id);
+					console.log(notification.activity.id,cacheItem);
+					if(cacheItem){
+						create("span",false," [" + extractKeywords(cacheItem.activity.text)[0] + "]",noti);
+					}
+				}
+			}
+			else{
+				noti.innerText = notification.type
+			}
+			if((index + 1) === notsData.data.Viewer.unreadNotificationCount){
+				create("hr","divider",false,sidebarApp);
+			}
+		})
 	}
 }
