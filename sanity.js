@@ -864,7 +864,6 @@ query{
 								likes.title = activity.likes.map(user => user.name).join("\n")
 							})
 						}
-						//update_cache(data.data.Page.activities,"global_text")
 					}
 				)
 			}
@@ -875,7 +874,11 @@ query{
 		action: function(){
 			updateUrl("?profile");
 			removeChildren(content);
-			create("div","error","You are not signed in. Go to 'settings' for login options",content);
+			if(!settings.accessToken){
+				create("div","error","You are not signed in. Go to 'settings' for login options",content);
+				return
+			}
+			create("div",false,"Profile of " + settings.me.name,content)
 		}
 	},
 	{
@@ -887,14 +890,34 @@ query{
 				let renderList = function(){
 					removeChildren(content);
 					let listArea = create("div","list-area",false,content);
-					personalAnimeList.forEach(list => {
+					personalAnimeList.sort((a,b) => {
+							let indexa = settings.me.mediaListOptions.animeList.sectionOrder.indexOf(a.name);
+							let indexb = settings.me.mediaListOptions.animeList.sectionOrder.indexOf(b.name);
+							if(indexa === indexb){
+								return a.name.localeCompare(b.name)
+							}
+							else if(indexa === -1){
+								return 1
+							}
+							else if(indexb === -1){
+								return -1
+							}
+							return indexa - indexb
+					}).forEach(list => {
 						let listWrap = create("div","list-wrap",false,listArea);
 						create("h3","section-name",list.name,listWrap);
 						let listSection = create("div","list-section",false,listWrap);
 						let listHead = create("div","list-head",false,listSection);
 						let listEntries = create("div","list-entries",false,listSection);
-						list.entries.forEach(entry => {
-							let entryRow = create("div","entry",mediaCache.get(entry).title.romaji,listEntries);
+						list.entries.sort((a,b) => {
+							if(settings.me.mediaListOptions.rowOrder === "score"){
+								return entryCache.get(b).scoreRaw - entryCache.get(a).scoreRaw || mediaCache.get(a).title.romaji.localeCompare(mediaCache.get(b).title.romaji)
+							}
+							else{
+								return mediaCache.get(a).title.romaji.localeCompare(mediaCache.get(b).title.romaji)
+							}
+						}).forEach(entry => {
+							let entryRow = create("div","entry",mediaCache.get(entry).title.romaji,listEntries)
 						})
 					})
 				}
