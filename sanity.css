@@ -124,7 +124,8 @@ body{
 }
 .create{
 	padding: 10px;
-	width: 90%;
+	width: calc(90% - 10px);
+	min-height: 75px;
 }
 .create textarea{
 	width: 98%;
@@ -258,4 +259,21 @@ video{
 	right: 12px;
 	font-size: x-small;
 	font-weight: lighter;
+}
+.publish-action{
+	float: right;
+}
+.button{
+	align-items: center;
+	background: #3db4f2;
+	border-radius: 4px;
+	cursor: pointer;
+	display: inline-flex;
+	margin-right: 4px;
+	padding: 5px 10px;
+	border-width: 0px;
+	margin-top: 5px;
+}
+.button.grey{
+	background: grey;
 }

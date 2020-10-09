@@ -509,13 +509,20 @@ document.addEventListener("mousemove",function(event){
 					let forum = create("span","mode","Forum",mode);
 				let typeFilter = create("div",false,false,filter);
 					let onlyText_input = createCheckbox(typeFilter,false,settings.isTextFeed);
-					create("span","label","is text",typeFilter);
+					create("span","label","text",typeFilter);
 					let onlyReplies_input = createCheckbox(typeFilter,false,settings.hasRepliesFeed);
-					create("span","label","has replies",typeFilter);
+					create("span","label","replies",typeFilter);
 				let createPost = create("div","create",false,content);
 				let createText = create("textarea",false,false,createPost);
 					createText.setAttribute("autocomplete","off");
-					createText.placeholder = "Write a status...";	
+					createText.placeholder = "Write a status...";
+				let publishButton = create("button",["button","publish-action","publish"],"Publish",createPost,"margin-right: 12px;");
+				let cancelButton = create("button",["button","publish-action","grey"],"Cancel",createPost);
+				let preview = create("div",["preview","markdown"],false,createPost);
+					createText.oninput = function(){
+						preview.innerHTML = makeHtml(createText.value)
+					}
+
 				let postContent = create("div","feed",false,content);
 				
 				let render = function(data){
@@ -885,6 +892,7 @@ query{
 		name: "Anime",
 		action: function(){
 			updateUrl("?anime");
+			document.title = "sAnity - anime list";
 			removeChildren(content);
 			if(settings.accessToken){
 				let renderList = function(){
@@ -1008,6 +1016,7 @@ fragment mediaListEntry on MediaList{
 		name: "Manga",
 		action: function(){
 			updateUrl("?manga");
+			document.title = "sAnity - manga list";
 			removeChildren(content);
 			if(settings.accessToken){
 			}
