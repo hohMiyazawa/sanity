@@ -74,6 +74,7 @@ function saveAs(data,fileName,pureText){
 const nav = document.getElementById("nav");
 const content = document.getElementById("mainpan");
 const sidebar = document.getElementById("sidebar");
+const footer = document.getElementById("footer");
 
 const locations = create("div","locations",null,nav);
 
@@ -250,6 +251,7 @@ makeHtml = function(markdown){
 		
 	})
 	return DOMPurify.sanitize(converter.makeHtml(preProcessed.join("")))
+
 }
 
 function emojiSanitize(string){
@@ -424,6 +426,7 @@ const retrieve_cache = function(cache_name,amount,filterFunction,optionalName){
 
 let defaultSettings = {
 	defaultFeed: "following",
+	theme: "dark",
 	greenManga: true,
 	isTextFeed: true,
 	hasRepliesFeed: false,
@@ -1387,4 +1390,27 @@ query{
 			}
 		})
 	}
+}
+
+let themes = create("div","themes",false,footer);
+let darkTheme = create("div",["theme","theme-dark"],"A",themes);
+	darkTheme.title = "Dark theme";
+darkTheme.onclick = function(){
+	document.body.classList.remove("theme-light");
+	document.body.classList.add("theme-dark");
+	settings.theme = "dark";
+	saveSettings()
+}
+let lightTheme = create("div",["theme","theme-light"],"A",themes);
+	lightTheme.title = "Light theme";
+lightTheme.onclick = function(){
+	document.body.classList.add("theme-light");
+	document.body.classList.remove("theme-dark");
+	settings.theme = "light";
+	saveSettings()
+}
+
+if(settings.theme === "light"){
+	document.body.classList.add("theme-light");
+	document.body.classList.remove("theme-dark")
 }

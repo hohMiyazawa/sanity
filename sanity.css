@@ -9,9 +9,16 @@ body{
 .theme-dark{
 	--color-text: 169,183,199;
 	--max-contrast: 255,255,255;
-	--color-background: 9,12,25;
 	--color-base: 0,0,0;
+	--color-background: 9,12,25;
 	--color-foreground: 21,31,46;
+}
+.theme-light{
+	--color-text: 92,114,138;
+	--max-contrast: 0,0,0;
+	--color-base: 255,255,255;
+	--color-background: 237,241,245;
+	--color-foreground: 250,250,250;
 }
 body{
 	background: rgb(var(--color-background));
@@ -83,7 +90,7 @@ body{
 }
 #mainpan{
 	overflow-y: scroll;
-	height: calc(100vh - 60px);
+	height: calc(100vh - 100px);
 	scrollbar-width: thin;
 	width: 60%;
 }
@@ -296,4 +303,31 @@ video{
 	border-radius: 2px;
 	min-width: 20px;
 	text-align: center;
+}
+#footer{
+	position: fixed;
+	bottom: 0px;
+	width: 100%;
+	min-height: 30px;
+	background: rgb(var(--color-foreground));
+	border-top: solid;
+	border-width: 1px;
+	padding: 3px;
+}
+#footer .links{
+	display: inline-block;
+}
+.themes{
+	float: right;
+	margin-right: 40px;
+}
+.themes .theme{
+	display: inline-block;
+	padding: 5px;
+	border: solid;
+	border-width: 1px;
+	margin: 2px;
+	color: rgb(var(--color-text));
+	background: rgb(var(--color-foreground));
+	cursor: pointer;
 }
