@@ -249,7 +249,7 @@ makeHtml = function(markdown){
 		return element
 		
 	})
-	return converter.makeHtml(preProcessed.join(""))
+	return DOMPurify.sanitize(converter.makeHtml(preProcessed.join("")))
 }
 
 function emojiSanitize(string){
