@@ -613,11 +613,11 @@ document.addEventListener("mousemove",function(event){
 
 				let postContent = create("div","feed",false,content);
 				
-				let render = function(data){
+				let render = function(data,afterActivity){
 					console.log("rendering feed!");
-					removeChildren(postContent)
 					data.forEach(activity => {
 						let postWrap = create("div","activity",false,postContent);
+						postWrap.dataset.activity = activity.id;
 						let item = create("div","post","",postWrap);
 						let header = create("div","header",false,item);
 						let user = create("span","ilink",activity.user.name,header);
@@ -731,7 +731,10 @@ document.addEventListener("mousemove",function(event){
 								}}
 							)
 						}
-					})
+					});
+					let loadMore = create("div","load-more","Load More",postContent);
+					loadMore.onclick = function(){
+					}
 				}
 				let updateMode = function(newFeed){
 					currentFeed = newFeed;
@@ -1188,6 +1191,9 @@ fragment mediaListEntry on MediaList{
 				saveSettings()
 			}
 			create("span","label","% Video max width",content);
+			create("hr","divider",false,content);
+			create("h3",false,"Feed settings",content);
+			createCheckboxSetting("renderCards","Render media cards");
 			create("hr","divider",false,content);
 			let exportButton = create("button","button","Export settings",content);
 			let importButton = create("button","button","Import settings",content);
