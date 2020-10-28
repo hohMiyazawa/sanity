@@ -266,7 +266,7 @@ function emojiSanitize(string){
 
 function extractKeywords(text,number){
 	number = number || 1;
-	let words = text.split(" ");
+	let words = text.replace(/(\.\s|\n)/," ").split(" ");
 	let sorted = words.sort((b,a) =>
 		(words.filter(v => v === a).length
 		- words.filter(v => v === b).length)
@@ -436,6 +436,7 @@ let defaultSettings = {
 	autoplayVideos: false,
 	muteVideos: true,
 	videoMaxwidth: 80,
+	oldstyle: false,
 	cacheDelays: {
 		replyHover: 10*60*1000,
 		replyClick: 1*60*1000,
@@ -503,10 +504,15 @@ query{
 }`;
 
 let occupy_sidebar = function(title){
-	removeChildren(sidebar);
-	let fullScreenApp = create("div","sidebarApp",false,sidebar);
+	//removeChildren(sidebar);
+	let fullScreenApp = create("div",["sidebarApp","full"],false,sidebar);
 	let appHeader = create("div","app-header",false,fullScreenApp);
 	create("h3","title",title,appHeader);
+	let cross = create("button","close",icons.cross,appHeader);
+	cross.title = "close";
+	cross.onclick = function(){
+		sidebar.removeChild(fullScreenApp)
+	}
 	let appContent = create("div",false,false,fullScreenApp);
 	return appContent
 }
@@ -612,6 +618,9 @@ document.addEventListener("mousemove",function(event){
 					}
 
 				let postContent = create("div","feed",false,content);
+				if(settings.oldstyle){
+					postContent.classList.add("oldstyle")
+				}
 				
 				let render = function(data,afterActivity){
 					console.log("rendering feed!");
@@ -705,6 +714,12 @@ document.addEventListener("mousemove",function(event){
 										)
 									}
 								})
+								let createReply = create("div","create",false,replyWrap);
+								let createText = create("textarea",false,false,createReply);
+									createText.setAttribute("autocomplete","off");
+									createText.placeholder = "Write a reply...";
+								let publishButton = create("button",["button","publish-action","publish"],"Publish",createReply,"margin-right: 12px;");
+								let cancelButton = create("button",["button","publish-action","grey"],"Cancel",createReply);
 							}
 						}
 						let likes = create("span",["action","likes"],(activity.likes.length || "") + icons.like,actions);
@@ -1147,8 +1162,12 @@ fragment mediaListEntry on MediaList{
 			create("p",false,"If the selected client redirects to a different instance of sAnity, you will have to copy-paste the access token into the field below:",content);
 			create("p",false,"(If you're using Automail v9.96.3+, you can also grab an access token from the bottom of its settings page. sAnity will then use the same login as Automail)",content);
 			let accessTokenField = create("textarea",false,false,content,"display: block");
-			accessTokenField.rows = 3;
-			accessTokenField.cols = 30;
+			accessTokenField.onclick = function(){
+				accessTokenField.focus();
+				accessTokenField.select()
+			}
+			accessTokenField.rows = 4;
+			accessTokenField.cols = 50;
 			accessTokenField.value = settings.accessToken || "";
 			let saveButton = create("button","button","Save",content);
 			saveButton.onclick = function(){
@@ -1194,6 +1213,7 @@ fragment mediaListEntry on MediaList{
 			create("hr","divider",false,content);
 			create("h3",false,"Feed settings",content);
 			createCheckboxSetting("renderCards","Render media cards");
+			createCheckboxSetting("oldstyle","Oldstyle feed layout");
 			create("hr","divider",false,content);
 			let exportButton = create("button","button","Export settings",content);
 			let importButton = create("button","button","Import settings",content);
@@ -1233,8 +1253,17 @@ if(settings.accessToken){
 	let notificationMenu = create("div",["notifications","ilink"],false,nav);
 	create("span","label","Notifications",notificationMenu);
 	let notificationCount = create("div","count",false,notificationMenu);
+	notificationCount.onclick = function(){
+		notificationCount.innerText = "";
+		authAPIcall(
+			"query{Notification(resetNotificationCount: true){... on ActivityLikeNotification{id}}}",
+			{},
+			function(data){}
+		)
+	}
 	let notsData;
 	let renderRequest = false;
+	let sidebarApp;
 	let callNots = function(){
 		authAPIcall(
 `
@@ -1329,11 +1358,11 @@ query{
 		)
 	};callNots();
 	notificationMenu.onclick = function(){
+		sidebarApp = occupy_sidebar("Notifications");
 		if(!notsData){
 			renderRequest = true;
 			return
 		}
-		let sidebarApp = occupy_sidebar("Notifications");
 		notsData.data.Page.notifications.forEach((notification,index) => {
 			let noti = create("div","notification",false,sidebarApp);
 			if(notification.user){

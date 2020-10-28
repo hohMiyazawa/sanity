@@ -281,6 +281,7 @@ video{
 	padding: 5px 10px;
 	border-width: 0px;
 	margin-top: 5px;
+	color: white;
 }
 .button.grey{
 	background: grey;
@@ -331,4 +332,44 @@ video{
 	color: rgb(var(--color-text));
 	background: rgb(var(--color-foreground));
 	cursor: pointer;
+}
+#sidebar{
+	position: relative;
+}
+.sidebarApp{
+	background: rgb(var(--color-background));
+}
+.sidebarApp.full{
+	position: absolute;
+	top: 0px;
+	left: 0px;
+	width: 100%;
+
+}
+.app-header{
+	position: relative;
+}
+.close{
+	position: absolute;
+	background: none;
+	padding: 1px;
+	border: none;
+	top: 0px;
+	right: 0px;
+	cursor: pointer;
+	color: red;
+}
+.full .close{
+	top: 0px;
+}
+.oldstyle .activity{
+	margin: 0px;
+	border: solid;
+	border-width: 1px;
+	border-top: none;
+}
+.oldstyle .activity:first-child{
+	margin-top: 10px;
+	border-top: solid;
+	border-top-width: 1px;
 }
