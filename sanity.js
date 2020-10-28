@@ -49,6 +49,10 @@ function removeChildren(node){
 	}
 }
 
+function loader(){
+	return create("span","loader","Loading ...")
+}
+
 const icons = {
 	heart: "♥️",
 	talk: "💬",
@@ -571,6 +575,140 @@ document.addEventListener("mousemove",function(event){
 	}
 },true);
 
+let formatActivity = function(activity,options){
+	let postWrap = create("div","activity",false);
+	postWrap.dataset.activity = activity.id;
+	let item = create("div","post","",postWrap);
+	let header = create("div","header",false,item);
+	let user = create("span","ilink",activity.user.name,header);
+	if(activity.user.name === settings.me.name){
+		user.classList.add("thisIsMe")
+	}
+		user.onclick = function(){
+			updateUrl("?profile=" + activity.user.name)
+		}
+	let time = create("time",false,relativeTime(activity.createdAt*1000),item);
+	time.setAttribute("datetime",(new Date(activity.createdAt*1000)).toISOString());
+	time.title = (new Date(activity.createdAt*1000)).toLocaleString();
+	if(activity.type === "TEXT"){
+		item.classList.add("text-post");
+		let markdown = create("div","markdown",false,item);
+		markdown.innerHTML = makeHtml(activity.text);
+	}
+	else if(activity.type === "MANGA_LIST" || activity.type === "ANIME_LIST"){
+		if(activity.status === "dropped"){
+			create("span","status"," dropped ",header);
+			let media = create("span","ilink",activity.media.title.romaji,header);
+			if(activity.type === "ANIME_LIST"){
+				media.classList.add("anime")
+			}
+			else{
+				media.classList.add("manga")
+			}
+			if(activity.progress){
+				create("span","status"," at " + (activity.type === "ANIME_LIST" ? " episode " : " chapter ")  + activity.progress,header)
+			}
+		}
+		else{
+			create("span","status"," " + activity.status + " ",header);
+			create("span","status",activity.progress,header);
+			create("span","status"," of ",header);
+			let media = create("span","ilink",activity.media.title.romaji,header);
+			if(activity.type === "ANIME_LIST"){
+				media.classList.add("anime")
+			}
+			else{
+				media.classList.add("manga")
+			}
+		}
+	}
+	let actions = create("div","actions",false,item);
+	let replies = create("span",["action","replies"],(activity.replies.length || "") + "💬",actions);
+	let replyWrap = null;
+	replies.onclick = function(){
+		postWrap.classList.toggle("replies-open");
+		if(replyWrap){
+			replyWrap.parentNode.removeChild(replyWrap);
+			replyWrap = null
+		}
+		else{
+			replyWrap = create("div","reply-wrap",false,postWrap);
+			activity.replies.forEach(reply => {
+				let replyDiv = create("div","reply",false,replyWrap);
+				let header = create("div","header",false,replyDiv);
+				let time = create("time",false,relativeTime(reply.createdAt*1000),replyDiv);
+				time.setAttribute("datetime",(new Date(reply.createdAt*1000)).toISOString());
+				time.title = (new Date(activity.createdAt*1000)).toLocaleString();
+				let user = create("span","ilink",reply.user.name,header);
+					user.onclick = function(){
+						updateUrl("?profile=" + activity.user.name)
+					}
+				let markdown = create("div","markdown",false,replyDiv);
+					markdown.innerHTML = makeHtml(reply.text);
+				let replyActions = create("div","actions",false,replyDiv);
+				let likes = create("span",["action","likes"],(reply.likes.length || "") + icons.like,replyActions);
+				if(reply.likes.some(like => like.name === settings.me.name)){
+					likes.classList.add("ILikeThis")
+				}
+				likes.title = reply.likes.map(user => user.name).join("\n");
+				likes.onclick = function(){
+					let meIndex = reply.likes.findIndex(like => like.name === settings.me.name);
+					if(meIndex === -1){
+						reply.likes.push({name: settings.me.name})
+					}
+					else{
+						reply.likes.splice(meIndex,1)
+					};
+					likes.classList.toggle("ILikeThis");
+					likes.innerText = (activity.likes.length || "") + icons.like;
+					authAPIcall(
+						"mutation($id:Int){ToggleLike(id:$id,type:ACTIVITY_REPLY){id}}",
+						{id: reply.id},
+						data => {if(!data){
+							console.log("like failed!");
+							likes.classList.toggle("ILikeThis")
+						}}
+					)
+				}
+			})
+			let createReply = create("div","create",false,replyWrap);
+			let createText = create("textarea",false,false,createReply);
+				createText.setAttribute("autocomplete","off");
+				createText.placeholder = "Write a reply...";
+			let publishButton = create("button",["button","publish-action","publish"],"Publish",createReply,"margin-right: 12px;");
+			let cancelButton = create("button",["button","publish-action","grey"],"Cancel",createReply);
+		}
+	}
+	if(options.openReplies){
+		replies.click()
+	}
+	let likes = create("span",["action","likes"],(activity.likes.length || "") + icons.like,actions);
+	if(activity.likes.some(like => like.name === settings.me.name)){
+		likes.classList.add("ILikeThis")
+	}
+	likes.title = activity.likes.map(user => user.name).join("\n");
+	likes.onclick = function(){
+		let meIndex = activity.likes.findIndex(like => like.name === settings.me.name);
+		if(meIndex === -1){
+			activity.likes.push({name: settings.me.name})
+		}
+		else{
+			activity.likes.splice(meIndex,1)
+		};
+		likes.classList.toggle("ILikeThis");
+		likes.innerText = (activity.likes.length || "") + icons.like;
+		authAPIcall(
+			"mutation($id:Int){ToggleLike(id:$id,type:ACTIVITY){id}}",
+			{id: activity.id},
+			data => {if(!data){
+				console.log("like failed!");
+				likes.classList.toggle("ILikeThis")
+			}}
+		)
+	}
+	return postWrap;
+}
+
 let activeTab;
 
 [
@@ -627,137 +765,10 @@ let activeTab;
 				let render = function(data,afterActivity){
 					console.log("rendering feed!");
 					data.forEach(activity => {
-						let postWrap = create("div","activity",false,postContent);
-						postWrap.dataset.activity = activity.id;
-						let item = create("div","post","",postWrap);
-						let header = create("div","header",false,item);
-						let user = create("span","ilink",activity.user.name,header);
-						if(activity.user.name === settings.me.name){
-							user.classList.add("thisIsMe")
-						}
-							user.onclick = function(){
-								updateUrl("?profile=" + activity.user.name)
-							}
-						let time = create("time",false,relativeTime(activity.createdAt*1000),item);
-						time.setAttribute("datetime",(new Date(activity.createdAt*1000)).toISOString());
-						time.title = (new Date(activity.createdAt*1000)).toLocaleString();
-						if(activity.type === "TEXT"){
-							item.classList.add("text-post");
-							let markdown = create("div","markdown",false,item);
-							markdown.innerHTML = makeHtml(activity.text);
-						}
-						else if(activity.type === "MANGA_LIST" || activity.type === "ANIME_LIST"){
-							if(activity.status === "dropped"){
-								create("span","status"," dropped ",header);
-								let media = create("span","ilink",activity.media.title.romaji,header);
-								if(activity.type === "ANIME_LIST"){
-									media.classList.add("anime")
-								}
-								else{
-									media.classList.add("manga")
-								}
-								if(activity.progress){
-									create("span","status"," at " + (activity.type === "ANIME_LIST" ? " episode " : " chapter ")  + activity.progress,header)
-								}
-							}
-							else{
-								create("span","status"," " + activity.status + " ",header);
-								create("span","status",activity.progress,header);
-								create("span","status"," of ",header);
-								let media = create("span","ilink",activity.media.title.romaji,header);
-								if(activity.type === "ANIME_LIST"){
-									media.classList.add("anime")
-								}
-								else{
-									media.classList.add("manga")
-								}
-							}
-						}
-						let actions = create("div","actions",false,item);
-						let replies = create("span",["action","replies"],(activity.replies.length || "") + "💬",actions);
-						let replyWrap = null;
-						replies.onclick = function(){
-							postWrap.classList.toggle("replies-open");
-							if(replyWrap){
-								replyWrap.parentNode.removeChild(replyWrap);
-								replyWrap = null
-							}
-							else{
-								replyWrap = create("div","reply-wrap",false,postWrap);
-								activity.replies.forEach(reply => {
-									let replyDiv = create("div","reply",false,replyWrap);
-									let header = create("div","header",false,replyDiv);
-									let time = create("time",false,relativeTime(reply.createdAt*1000),replyDiv);
-									time.setAttribute("datetime",(new Date(reply.createdAt*1000)).toISOString());
-									time.title = (new Date(activity.createdAt*1000)).toLocaleString();
-									let user = create("span","ilink",reply.user.name,header);
-										user.onclick = function(){
-											updateUrl("?profile=" + activity.user.name)
-										}
-									let markdown = create("div","markdown",false,replyDiv);
-										markdown.innerHTML = makeHtml(reply.text);
-									let replyActions = create("div","actions",false,replyDiv);
-									let likes = create("span",["action","likes"],(reply.likes.length || "") + icons.like,replyActions);
-									if(reply.likes.some(like => like.name === settings.me.name)){
-										likes.classList.add("ILikeThis")
-									}
-									likes.title = reply.likes.map(user => user.name).join("\n");
-									likes.onclick = function(){
-										let meIndex = reply.likes.findIndex(like => like.name === settings.me.name);
-										if(meIndex === -1){
-											reply.likes.push({name: settings.me.name})
-										}
-										else{
-											reply.likes.splice(meIndex,1)
-										};
-										likes.classList.toggle("ILikeThis");
-										likes.innerText = (activity.likes.length || "") + icons.like;
-										authAPIcall(
-											"mutation($id:Int){ToggleLike(id:$id,type:ACTIVITY_REPLY){id}}",
-											{id: reply.id},
-											data => {if(!data){
-												console.log("like failed!");
-												likes.classList.toggle("ILikeThis")
-											}}
-										)
-									}
-								})
-								let createReply = create("div","create",false,replyWrap);
-								let createText = create("textarea",false,false,createReply);
-									createText.setAttribute("autocomplete","off");
-									createText.placeholder = "Write a reply...";
-								let publishButton = create("button",["button","publish-action","publish"],"Publish",createReply,"margin-right: 12px;");
-								let cancelButton = create("button",["button","publish-action","grey"],"Cancel",createReply);
-							}
-						}
-						let likes = create("span",["action","likes"],(activity.likes.length || "") + icons.like,actions);
-						if(activity.likes.some(like => like.name === settings.me.name)){
-							likes.classList.add("ILikeThis")
-						}
-						likes.title = activity.likes.map(user => user.name).join("\n");
-						likes.onclick = function(){
-							let meIndex = activity.likes.findIndex(like => like.name === settings.me.name);
-							if(meIndex === -1){
-								activity.likes.push({name: settings.me.name})
-							}
-							else{
-								activity.likes.splice(meIndex,1)
-							};
-							likes.classList.toggle("ILikeThis");
-							likes.innerText = (activity.likes.length || "") + icons.like;
-							authAPIcall(
-								"mutation($id:Int){ToggleLike(id:$id,type:ACTIVITY){id}}",
-								{id: activity.id},
-								data => {if(!data){
-									console.log("like failed!");
-									likes.classList.toggle("ILikeThis")
-								}}
-							)
-						}
+						postContent.appendChild(formatActivity(activity,{openReplies: false}))
 					});
 					let loadMore = create("div","load-more","Load More",postContent);
-					loadMore.onclick = function(){
-					}
+					loadMore.onclick = function(){}
 				}
 				let updateMode = function(newFeed){
 					currentFeed = newFeed;
@@ -1253,6 +1264,57 @@ fragment mediaListEntry on MediaList{
 
 let viewSingleActivity = function(id){
 	updateUrl("?activity=" + id);
+	removeChildren(content);
+	if(activity_map.has(id)){
+		content.appendChild(formatActivity(activity_map.get(id),{openReplies: true}))
+	}
+	else{
+		content.appendChild(loader())
+	}
+	generalAPIcall(
+		`query($id: Int){
+			Activity(id: $id){
+				... on TextActivity{
+					id
+					type
+					createdAt
+					text
+					user{name}
+					likes{name}
+					replies{
+						id
+						createdAt
+						text
+						user{name}
+						likes{name}
+					}
+				}
+				... on ListActivity{
+					id
+					type
+					createdAt
+					user{name}
+					likes{name}
+					media{title{romaji}}
+					progress
+					status
+					replies{
+						id
+						createdAt
+						text
+						user{name}
+						likes{name}
+					}
+				}
+			}
+		}`,
+		{id: id},
+		function(data){
+			activity_map.set(id,data.data.Activity);
+			removeChildren(content);
+			content.appendChild(formatActivity(activity_map.get(id),{openReplies: true}))
+		}
+	)
 }
 
 let viewSingleUser = function(name){
@@ -1396,6 +1458,9 @@ query{
 				if(notification.activity.type === "MANGA_LIST"){
 					activityLink.classList.add("manga")
 				}
+				activityLink.onclick = function(){
+					viewSingleActivity(notification.activity.id)
+				}
 			}
 			else if(notification.type === "ACTIVITY_REPLY_LIKE"){
 				create("span",false," liked your ",noti);
@@ -1405,6 +1470,9 @@ query{
 					if(cacheItem){
 						create("span",false," [" + extractKeywords(cacheItem.activity.text)[0] + "]",noti)
 					}
+				}
+				activityLink.onclick = function(){
+					viewSingleActivity(notification.activity.id)
 				}
 			}
 			else if(notification.type === "ACTIVITY_REPLY_SUBSCRIBED"){
@@ -1445,6 +1513,7 @@ let darkTheme = create("div",["theme","theme-dark"],"A",themes);
 darkTheme.onclick = function(){
 	document.body.classList.remove("theme-light");
 	document.body.classList.add("theme-dark");
+	document.body.classList.remove("theme-lum");
 	settings.theme = "dark";
 	saveSettings()
 }
@@ -1453,11 +1522,25 @@ let lightTheme = create("div",["theme","theme-light"],"A",themes);
 lightTheme.onclick = function(){
 	document.body.classList.add("theme-light");
 	document.body.classList.remove("theme-dark");
+	document.body.classList.remove("theme-lum");
 	settings.theme = "light";
+	saveSettings()
+}
+let lumTheme = create("div",["theme","theme-lum"],"A",themes);
+	lumTheme.title = "Lum theme";
+lumTheme.onclick = function(){
+	document.body.classList.remove("theme-light");
+	document.body.classList.remove("theme-dark");
+	document.body.classList.add("theme-lum");
+	settings.theme = "lum";
 	saveSettings()
 }
 
 if(settings.theme === "light"){
 	document.body.classList.add("theme-light");
+	document.body.classList.remove("theme-dark")
+}
+else if(settings.theme === "lum"){
+	document.body.classList.add("theme-lum");
 	document.body.classList.remove("theme-dark")
 }
