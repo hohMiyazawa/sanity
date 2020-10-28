@@ -373,3 +373,13 @@ video{
 	border-top: solid;
 	border-top-width: 1px;
 }
+.oldstyle .reply{
+	margin: 0px;
+	border: solid;
+	border-width: 1px;
+	border-top: none;
+	border-radius: 0px;
+}
+.thisIsMe{
+	color: rgb(var(--color-peach));
+}

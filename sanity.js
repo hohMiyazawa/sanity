@@ -571,6 +571,8 @@ document.addEventListener("mousemove",function(event){
 	}
 },true);
 
+let activeTab;
+
 [
 	{
 		name: "Social",
@@ -630,6 +632,9 @@ document.addEventListener("mousemove",function(event){
 						let item = create("div","post","",postWrap);
 						let header = create("div","header",false,item);
 						let user = create("span","ilink",activity.user.name,header);
+						if(activity.user.name === settings.me.name){
+							user.classList.add("thisIsMe")
+						}
 							user.onclick = function(){
 								updateUrl("?profile=" + activity.user.name)
 							}
@@ -682,6 +687,9 @@ document.addEventListener("mousemove",function(event){
 								activity.replies.forEach(reply => {
 									let replyDiv = create("div","reply",false,replyWrap);
 									let header = create("div","header",false,replyDiv);
+									let time = create("time",false,relativeTime(reply.createdAt*1000),replyDiv);
+									time.setAttribute("datetime",(new Date(reply.createdAt*1000)).toISOString());
+									time.title = (new Date(activity.createdAt*1000)).toLocaleString();
 									let user = create("span","ilink",reply.user.name,header);
 										user.onclick = function(){
 											updateUrl("?profile=" + activity.user.name)
@@ -1002,6 +1010,9 @@ query{
 			removeChildren(content);
 			if(settings.accessToken){
 				let renderList = function(){
+					if(activeTab !== "Anime"){
+						return
+					}
 					removeChildren(content);
 					let listArea = create("div","list-area",false,content);
 					personalAnimeList.sort((a,b) => {
@@ -1235,6 +1246,7 @@ fragment mediaListEntry on MediaList{
 	span.onclick = function(){
 		document.querySelector("#nav .active").classList.remove("active");
 		span.classList.add("active");
+		activeTab = location.name;
 		location.action()
 	}
 });
