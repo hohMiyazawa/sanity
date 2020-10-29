@@ -1383,6 +1383,9 @@ query{
 							let entryRow = create("div","entry",false,listEntries);
 							let name = create("span","name",media.title.romaji,entryRow);
 							let progress = create("span","progress",listEntry.progress,entryRow);
+							if(media.episodes){
+								progress.innerText = listEntry.progress + "/" + media.episodes
+							}
 							let score = create("span","score",listEntry.scoreRaw || "",entryRow);
 							if(anyNotes){
 								let notes = create("span","notes",(listEntry.notes ? icons.talk : ""),entryRow);
@@ -1552,7 +1555,13 @@ fragment mediaListEntry on MediaList{
 							let entryRow = create("div","entry",false,listEntries);
 							let name = create("span","name",media.title.romaji,entryRow);
 							let progress = create("span","progress",listEntry.progress,entryRow);
+							if(media.chapters){
+								progress.innerText = listEntry.progress + "/" + media.chapters
+							}
 							let progressVolumes = create("span","progress-volumes",listEntry.progressVolumes,entryRow);
+							if(media.volumes){
+								progressVolumes.innerText = listEntry.progressVolumes + "/" + media.volumes
+							}
 							let score = create("span","score",listEntry.scoreRaw || "",entryRow);
 							if(anyNotes){
 								let notes = create("span","notes",(listEntry.notes ? icons.talk : ""),entryRow);
@@ -1603,14 +1612,11 @@ fragment mediaListEntry on MediaList{
 	media{
 		chapters
 		volumes
-		duration
-		nextAiringEpisode{episode}
 		format
 		title{romaji native english}
 		tags{name}
 		genres
 		meanScore
-		studios{nodes{isAnimationStudio id name}}
 	}
 	scoreRaw: score(format: POINT_100)
 }`,
@@ -1659,12 +1665,16 @@ fragment mediaListEntry on MediaList{
 		name: "Browse",
 		action: function(){
 			updateUrl("?browse");
+			removeChildren(content);
+			create("p",false,"not implemented",content);
 		}
 	},
 	{
 		name: "Search",
 		action: function(){
 			updateUrl("?search");
+			removeChildren(content);
+			create("p",false,"not implemented",content);
 		}
 	},
 	{
