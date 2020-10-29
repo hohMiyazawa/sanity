@@ -295,6 +295,9 @@ body.theme-lum{
 .activity:not(.standalone).replies-open{
 	border-right: dashed;
 	border-right-width: 2px;
+	margin-right: 8px;
+}
+.oldstyle .activity:not(.standalone).replies-open{
 	margin-right: -1px;
 }
 .activity .reply-wrap{
@@ -482,6 +485,10 @@ video{
 	width: 30%;
 }
 .entry .score{
+	width: 10%;
+	text-align: center;
+}
+.entry .notes{
 	width: 10%;
 	text-align: center;
 }

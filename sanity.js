@@ -635,6 +635,7 @@ let listEditor = function(mediaId,type,fallbackName){
 				progress
 				${type === "MANGA_LIST" ? "progressVolumes" : ""}
 				status
+				notes
 				scoreRaw: score(format: POINT_100)
 			}}`,
 			{
@@ -658,6 +659,7 @@ let listEditor = function(mediaId,type,fallbackName){
 				progressVolumes.value = entryData.progressVolumes;
 			}
 			score.value = entryData.scoreRaw || "";
+			notes.value = entryData.notes;
 			let deleteButton = create("button",["button","danger"],"Delete",editor);
 			deleteButton.onclick = function(){
 				alert("not implemented")
@@ -678,6 +680,7 @@ let listEditor = function(mediaId,type,fallbackName){
 					progress
 					${type === "MANGA_LIST" ? "progressVolumes" : ""}
 					status
+					notes
 					scoreRaw: score(format: POINT_100)
 				}
 			}`,
@@ -1354,10 +1357,14 @@ query{
 								listSection.style.display = "block";
 							}
 						}
+						let anyNotes = list.entries.some(entry => entryCache.get(entry).notes);
 						let listHead = create("div","list-head",false,listSection);
 							create("span","list-heading","Title",listHead,"width: 30%");
 							create("span","list-heading","Episodes",listHead,"width: 10%;text-align: center;");
 							create("span","list-heading","Score",listHead,"width: 10%;text-align: center;");
+							if(anyNotes){
+								create("span","list-heading","Notes",listHead,"width: 10%;text-align: center;");
+							}
 							if(list.isCustomList){
 								create("span","list-heading","Status",listHead,"width: 10%;text-align: center;");
 							}
@@ -1377,6 +1384,10 @@ query{
 							let name = create("span","name",media.title.romaji,entryRow);
 							let progress = create("span","progress",listEntry.progress,entryRow);
 							let score = create("span","score",listEntry.scoreRaw || "",entryRow);
+							if(anyNotes){
+								let notes = create("span","notes",(listEntry.notes ? icons.talk : ""),entryRow);
+								notes.title = listEntry.notes
+							}
 							if(list.isCustomList){
 								let status = create("span","status",listEntry.status.toLowerCase(),entryRow);
 							}
@@ -1514,11 +1525,15 @@ fragment mediaListEntry on MediaList{
 								listSection.style.display = "block";
 							}
 						}
+						let anyNotes = list.entries.some(entry => entryCache.get(entry).notes);
 						let listHead = create("div","list-head",false,listSection);
 							create("span","list-heading","Title",listHead,"width: 30%");
 							create("span","list-heading","Chapters",listHead,"width: 10%;text-align: center;");
 							create("span","list-heading","Volumes",listHead,"width: 10%;text-align: center;");
 							create("span","list-heading","Score",listHead,"width: 10%;text-align: center;");
+							if(anyNotes){
+								create("span","list-heading","Notes",listHead,"width: 10%;text-align: center;");
+							}
 							if(list.isCustomList){
 								create("span","list-heading","Status",listHead,"width: 10%;text-align: center;");
 							}
@@ -1539,6 +1554,10 @@ fragment mediaListEntry on MediaList{
 							let progress = create("span","progress",listEntry.progress,entryRow);
 							let progressVolumes = create("span","progress-volumes",listEntry.progressVolumes,entryRow);
 							let score = create("span","score",listEntry.scoreRaw || "",entryRow);
+							if(anyNotes){
+								let notes = create("span","notes",(listEntry.notes ? icons.talk : ""),entryRow);
+								notes.title = listEntry.notes
+							}
 							if(list.isCustomList){
 								let status = create("span","status",listEntry.status.toLowerCase(),entryRow);
 							}
