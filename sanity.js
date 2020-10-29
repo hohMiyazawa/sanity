@@ -110,6 +110,7 @@ let handleResponse = function(response){
 }
 
 function generalAPIcall(query,variables,callback,cache,fatalError){
+	console.log("q",query);
 	let handleData = function(data){
 		callback(data,variables)
 	};
@@ -441,6 +442,7 @@ let defaultSettings = {
 	muteVideos: true,
 	videoMaxwidth: 80,
 	oldstyle: false,
+	openReplies: false,
 	cacheDelays: {
 		replyHover: 10*60*1000,
 		replyClick: 1*60*1000,
@@ -507,17 +509,20 @@ query{
 	}
 }`;
 
-let occupy_sidebar = function(title){
+let occupy_sidebar = function(title,destructor){
 	//removeChildren(sidebar);
 	let fullScreenApp = create("div",["sidebarApp","full"],false,sidebar);
 	let appHeader = create("div","app-header",false,fullScreenApp);
 	create("h3","title",title,appHeader);
 	let cross = create("button","close",icons.cross,appHeader);
 	cross.title = "close";
-	cross.onclick = function(){
-		sidebar.removeChild(fullScreenApp)
-	}
 	let appContent = create("div",false,false,fullScreenApp);
+	cross.onclick = function(){
+		sidebar.removeChild(fullScreenApp);
+		if(destructor){
+			destructor()
+		}
+	}
 	return appContent
 }
 
@@ -585,7 +590,7 @@ let formatActivity = function(activity,options){
 		user.classList.add("thisIsMe")
 	}
 		user.onclick = function(){
-			updateUrl("?profile=" + activity.user.name)
+			viewSingleProfile(activity.user.name)
 		}
 	let time = create("time",false,relativeTime(activity.createdAt*1000),item);
 	time.setAttribute("datetime",(new Date(activity.createdAt*1000)).toISOString());
@@ -679,7 +684,7 @@ let formatActivity = function(activity,options){
 			let cancelButton = create("button",["button","publish-action","grey"],"Cancel",createReply);
 		}
 	}
-	if(options.openReplies){
+	if(options.openReplies || (options.autoOpen && activity.replies.length)){
 		replies.click()
 	}
 	let likes = create("span",["action","likes"],(activity.likes.length || "") + icons.like,actions);
@@ -765,7 +770,7 @@ let activeTab;
 				let render = function(data,afterActivity){
 					console.log("rendering feed!");
 					data.forEach(activity => {
-						postContent.appendChild(formatActivity(activity,{openReplies: false}))
+						postContent.appendChild(formatActivity(activity,{openReplies: false, autoOpen: settings.openReplies}))
 					});
 					let loadMore = create("div","load-more","Load More",postContent);
 					loadMore.onclick = function(){}
@@ -1010,7 +1015,7 @@ query{
 				create("div","error","You are not signed in. Go to 'settings' for login options",content);
 				return
 			}
-			create("div",false,"Profile of " + settings.me.name,content)
+			viewSingleProfile(settings.me.name);
 		}
 	},
 	{
@@ -1236,6 +1241,7 @@ fragment mediaListEntry on MediaList{
 			create("h3",false,"Feed settings",content);
 			createCheckboxSetting("renderCards","Render media cards");
 			createCheckboxSetting("oldstyle","Oldstyle feed layout");
+			createCheckboxSetting("openReplies","Open all replies by default");
 			create("hr","divider",false,content);
 			let exportButton = create("button","button","Export settings",content);
 			let importButton = create("button","button","Import settings",content);
@@ -1262,11 +1268,18 @@ fragment mediaListEntry on MediaList{
 	}
 });
 
+function viewSingleProfile(name){
+	removeChildren(content);
+	updateUrl("?profile=" + name);
+	removeChildren(content);
+	create("div",false,"Profile of " + name,content)
+}
+
 let viewSingleActivity = function(id){
 	updateUrl("?activity=" + id);
 	removeChildren(content);
 	if(activity_map.has(id)){
-		content.appendChild(formatActivity(activity_map.get(id),{openReplies: true}))
+		content.appendChild(formatActivity(activity_map.get(id).activity,{openReplies: true}))
 	}
 	else{
 		content.appendChild(loader())
@@ -1310,17 +1323,11 @@ let viewSingleActivity = function(id){
 		}`,
 		{id: id},
 		function(data){
-			activity_map.set(id,data.data.Activity);
+			activity_map.set(id,new ActivityNode(data.data.Activity));
 			removeChildren(content);
-			content.appendChild(formatActivity(activity_map.get(id),{openReplies: true}))
+			content.appendChild(formatActivity(activity_map.get(id).activity,{openReplies: true}))
 		}
 	)
-}
-
-let viewSingleUser = function(name){
-	updateUrl("?profile=" + name);
-	removeChildren(content);
-	let profileInfo = create("div",false,"Profile of " + name,content)
 }
 
 if(settings.accessToken){
@@ -1337,7 +1344,7 @@ if(settings.accessToken){
 	}
 	let notsData;
 	let renderRequest = false;
-	let sidebarApp;
+	let sidebarApp = null;
 	let callNots = function(){
 		authAPIcall(
 `
@@ -1426,23 +1433,22 @@ query{
 				console.log(data);
 				if(renderRequest){
 					renderRequest = false;
-					notificationMenu.click()
+					renderNots()
 				}
 			}
 		)
 	};callNots();
-	notificationMenu.onclick = function(){
-		sidebarApp = occupy_sidebar("Notifications");
-		if(!notsData){
-			renderRequest = true;
-			return
+	let renderNots = function(){
+		if(!sidebarApp){
+			sidebarApp = occupy_sidebar("Notifications",function(){sidebarApp = null})
 		}
+		removeChildren(sidebarApp)
 		notsData.data.Page.notifications.forEach((notification,index) => {
 			let noti = create("div","notification",false,sidebarApp);
 			if(notification.user){
 				let userLink = create("span","ilink",notification.user.name,noti);
 				userLink.onclick = function(){
-					viewSingleUser(notification.user.name)
+					viewSingleProfile(notification.user.name)
 				}
 			}
 			if(notification.type === "ACTIVITY_LIKE"){
@@ -1504,6 +1510,14 @@ query{
 				create("hr","divider",false,sidebarApp)
 			}
 		})
+	}
+	notificationMenu.onclick = function(){
+		renderRequest = true;
+		renderNots();
+		if(!notsData){
+			return
+		}
+		callNots()
 	}
 }
 
