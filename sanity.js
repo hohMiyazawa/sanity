@@ -736,6 +736,7 @@ let formatActivity = function(activity,options){
 				let editLink = create("span","ilink",icons.edit,rightActions);
 				editLink.title = "edit";
 				editLink.onclick = function(){
+					document.querySelector(".create textarea").value = activity.text;
 					content.scroll({
 						top: 0,
 						left: 0,
@@ -879,6 +880,7 @@ let formatActivity = function(activity,options){
 					};
 					likes.classList.toggle("ILikeThis");
 					likes.innerText = (activity.likes.length || "") + icons.like;
+					likes.title = reply.likes.map(user => user.name).join("\n");
 					authAPIcall(
 						"mutation($id:Int){ToggleLike(id:$id,type:ACTIVITY_REPLY){id}}",
 						{id: reply.id},
@@ -1725,7 +1727,7 @@ let viewSingleActivity = function(id){
 	updateUrl("?activity=" + id);
 	removeChildren(content);
 	if(activity_map.has(id)){
-		content.appendChild(formatActivity(activity_map.get(id).activity,{openReplies: true}))
+		content.appendChild(formatActivity(activity_map.get(id).activity,{openReplies: true,standalone: true}))
 	}
 	else{
 		content.appendChild(loader())
@@ -1912,8 +1914,8 @@ query{
 				sidebarApp = null
 			})
 		}
-		removeChildren(sidebarApp)
-		notsData.data.Page.notifications.forEach((notification,index) => {
+		removeChildren(sidebarApp);
+		(notsData ? notsData.data.Page.notifications : []).forEach((notification,index) => {
 			let noti = create("div","notification",false,sidebarApp);
 			if(notification.user){
 				let userLink = create("span","ilink",notification.user.name,noti);
@@ -1993,6 +1995,8 @@ query{
 		callNots()
 	}
 }
+
+let versioning = create("span","version","sAnity 0.1 pre-alpha",footer);
 
 let themes = create("div","themes",false,footer);
 let darkTheme = create("div",["theme","theme-dark"],"A",themes);
