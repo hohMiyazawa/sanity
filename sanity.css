@@ -264,14 +264,15 @@ body.theme-lum{
 	position: relative;
 	vertical-align: middle;
 }
-.input-number{
+.editor-input{
+	width: 120px;
 	background: rgb(var(--color-background));
 	padding: 4px;
 	border-radius: 2px;
 	color: rgb(var(--max-contrast));
 }
-.editor-input.input-number{
-	width: 100px;
+.editor-input.notes{
+	width: calc(100% - 20px);
 }
 .filter .hohCheckbox{
 	padding-left: 25px;
@@ -289,7 +290,7 @@ body.theme-lum{
 .activity:not(.standalone).replies-open{
 	border-right: dashed;
 	border-right-width: 2px;
-	margin-right: 8px;
+	margin-right: -1px;
 }
 .activity .reply-wrap{
 	margin-left: 40px;
@@ -337,6 +338,9 @@ video{
 .button.disabled{
 	opacity: 0.5;
 	cursor: default;
+}
+.danger{
+	background: rgb(var(--color-peach));
 }
 .notifications{
 	position: absolute;

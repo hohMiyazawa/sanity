@@ -159,7 +159,7 @@ function authAPIcall(query,variables,callback,cache,fatalError){
 		})
 	};
 	let handleError = function(error){
-		if(fatalError !== "acceptable" || error.errors.length !== 1 || error.errors[0].message !== "Not Found."){
+		if(fatalError !== "acceptable" || !error.errors || error.errors.length !== 1 || error.errors[0].message !== "Not Found."){
 			console.error(error,variables);
 			if(error.errors){
 				if(
@@ -572,6 +572,7 @@ let occupy_sidebar = function(title,destructor){
 let listEditor = function(mediaId,type,fallbackName){
 	let editor = occupy_sidebar(fallbackName);
 	editor.classList.add("editor");
+	let saveButton = create("button","button","Add",editor);
 	let progressRow = create("p","data-row",false,editor);
 	let progress = create("input",["editor-input","input-number"],false,progressRow);
 	progress.type = "number";
@@ -582,7 +583,7 @@ let listEditor = function(mediaId,type,fallbackName){
 	let progressVolumes;
 	if(type === "MANGA_LIST"){
 		let progressVolumesRow = create("p","data-row",false,editor);
-		let progressVolumes = create("input",["editor-input","input-number"],false,progressVolumesRow);
+		progressVolumes = create("input",["editor-input","input-number"],false,progressVolumesRow);
 		progressVolumes.type = "number";
 		progressVolumes.min = 0;
 		progressVolumes.step = 1;
@@ -592,13 +593,41 @@ let listEditor = function(mediaId,type,fallbackName){
 	let scoreRow = create("p","data-row",false,editor);
 	let score = create("input",["editor-input","input-number"],false,scoreRow);
 	score.type = "number";
-	score.min = 0;
+	score.min = 1;
 	score.max = 100;
 	score.step = 1;
 	create("span","label","Score",scoreRow,"margin-left: 5px");
 
+	let startRow = create("p","data-row",false,editor);
+	let startDate = create("input",["editor-input","input-date"],false,startRow);
+	startDate.type = "date";
+	create("span","label","Start date",startRow,"margin-left: 5px");
+
+	let endRow = create("p","data-row",false,editor);
+	let endDate = create("input",["editor-input","input-date"],false,endRow);
+	endDate.type = "date";
+	create("span","label","End date",endRow,"margin-left: 5px");
+
+	let repeatRow = create("p","data-row",false,editor);
+	let repeat = create("input",["editor-input","input-number"],false,repeatRow);
+	repeat.type = "number";
+	repeat.min = 0;
+	repeat.step = 1;
+	create("span","label","Repeats",repeatRow,"margin-left: 5px");
+
 	create("hr","divider",false,editor);
-	let saveButton = create("button","button","Add",editor);
+
+	let priorityRow = create("p","data-row",false,editor);
+	let priority = create("input",["editor-input","input-number"],false,priorityRow);
+	priority.type = "number";
+	priority.min = 0;
+	priority.step = 1;
+	create("span","label","Priority",priorityRow,"margin-left: 5px");
+
+	let notes = create("textarea",["editor-input","notes"],false,editor);
+	notes.placeholder = "notes";
+
+	create("hr","divider",false,editor);
 	saveButton.onclick = function(){
 		authAPIcall(
 			`mutation($mediaId: Int,$progress: Int){SaveMediaListEntry(mediaId: $mediaId,progress: $progress){
@@ -628,7 +657,11 @@ let listEditor = function(mediaId,type,fallbackName){
 			if(type === "MANGA_LIST"){
 				progressVolumes.value = entryData.progressVolumes;
 			}
-			score.value = entryData.scoreRaw;
+			score.value = entryData.scoreRaw || "";
+			let deleteButton = create("button",["button","danger"],"Delete",editor);
+			deleteButton.onclick = function(){
+				alert("not implemented")
+			}
 		}
 		else{
 			saveButton.innerText = "Add"
@@ -1773,7 +1806,7 @@ let viewSingleActivity = function(id){
 		function(data){
 			activity_map.set(id,new ActivityNode(data.data.Activity));
 			removeChildren(content);
-			content.appendChild(formatActivity(activity_map.get(id).activity,{openReplies: true}))
+			content.appendChild(formatActivity(activity_map.get(id).activity,{openReplies: true,standalone: true}))
 		}
 	)
 }
