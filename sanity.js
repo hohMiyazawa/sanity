@@ -279,6 +279,11 @@ function extractKeywords(text,number){
 	).filter(
 		word => !["in","the","it","It's","is","are","I","I'm","you","with","for"].includes(word) && word.length < 30
 	)
+	if(!sorted.length){
+		if(text.match(/img/i)){
+			sorted = ["IMG"]
+		}
+	}
 	return sorted.slice(0,number)
 }
 
@@ -769,6 +774,9 @@ let activeTab;
 				
 				let render = function(data,afterActivity){
 					console.log("rendering feed!");
+					if(!afterActivity){
+						removeChildren(postContent)
+					}
 					data.forEach(activity => {
 						postContent.appendChild(formatActivity(activity,{openReplies: false, autoOpen: settings.openReplies}))
 					});
