@@ -578,7 +578,7 @@ let listEditor = function(mediaId,type,fallbackName){
 	progress.step = 1;
 	create("span","label","Progress",editor,"margin-left: 5px");
 	create("hr","divider",false,editor);
-	let saveButton = create("button","button","Save",editor);
+	let saveButton = create("button","button","Add",editor);
 	saveButton.onclick = function(){
 		authAPIcall(
 			`mutation($mediaId: Int,$progress: Int){SaveMediaListEntry(mediaId: $mediaId,progress: $progress){
@@ -601,7 +601,11 @@ let listEditor = function(mediaId,type,fallbackName){
 	let insertValues = function(){
 		let entryData = entryCache.get(mediaId);
 		if(entryData){
+			saveButton.innerText = "Save";
 			progress.value = entryData.progress
+		}
+		else{
+			saveButton.innerText = "Add"
 		}
 	}
 	if(entryCache.has(mediaId)){
@@ -620,7 +624,8 @@ let listEditor = function(mediaId,type,fallbackName){
 			function(data){
 				console.log(data);
 				if(!data){
-					entryCache.set(mediaId,null)
+					entryCache.set(mediaId,null);
+					insertValues()
 				}
 				else{
 					entryCache.set(mediaId,data.data.MediaList);
@@ -1243,6 +1248,10 @@ query{
 						create("h3","section-name",list.name,listWrap);
 						let listSection = create("div","list-section",false,listWrap);
 						let listHead = create("div","list-head",false,listSection);
+							create("span","list-heading","Title",listHead,"width: 30%");
+							create("span","list-heading","Progress",listHead,"width: 10%");
+							create("span","list-heading","Score",listHead,"width: 10%");
+							create("span","list-heading","",listHead,"width: 10px");
 						let listEntries = create("div","list-entries",false,listSection);
 						list.entries.sort((a,b) => {
 							if(settings.me.mediaListOptions.rowOrder === "score"){
@@ -1252,7 +1261,17 @@ query{
 								return mediaCache.get(a).title.romaji.localeCompare(mediaCache.get(b).title.romaji)
 							}
 						}).forEach(entry => {
-							let entryRow = create("div","entry",mediaCache.get(entry).title.romaji,listEntries)
+							let media = mediaCache.get(entry);
+							let listEntry = entryCache.get(entry);
+							let entryRow = create("div","entry",false,listEntries);
+							let name = create("span","name",media.title.romaji,entryRow);
+							let progress = create("span","progress",listEntry.progress,entryRow);
+							let score = create("span","score",listEntry.scoreRaw || "",entryRow);
+							let editorLink = create("span",["ilink","editor-link"],icons.edit,entryRow);
+							editorLink.title = "edit";
+							editorLink.onclick = function(){
+								listEditor(entry,"ANIME_LIST",media.title.romaji)
+							}
 						})
 					})
 				}
@@ -1346,6 +1365,123 @@ fragment mediaListEntry on MediaList{
 			document.title = "sAnity - manga list";
 			removeChildren(content);
 			if(settings.accessToken){
+				let renderList = function(){
+					if(activeTab !== "Manga"){
+						return
+					}
+					removeChildren(content);
+					let listArea = create("div","list-area",false,content);
+					personalMangaList.sort((a,b) => {
+							let indexa = settings.me.mediaListOptions.mangaList.sectionOrder.indexOf(a.name);
+							let indexb = settings.me.mediaListOptions.mangaList.sectionOrder.indexOf(b.name);
+							if(indexa === indexb){
+								return a.name.localeCompare(b.name)
+							}
+							else if(indexa === -1){
+								return 1
+							}
+							else if(indexb === -1){
+								return -1
+							}
+							return indexa - indexb
+					}).forEach(list => {
+						let listWrap = create("div","list-wrap",false,listArea);
+						create("h3","section-name",list.name,listWrap);
+						let listSection = create("div","list-section",false,listWrap);
+						let listHead = create("div","list-head",false,listSection);
+						let listEntries = create("div","list-entries",false,listSection);
+						list.entries.sort((a,b) => {
+							if(settings.me.mediaListOptions.rowOrder === "score"){
+								return entryCache.get(b).scoreRaw - entryCache.get(a).scoreRaw || mediaCache.get(a).title.romaji.localeCompare(mediaCache.get(b).title.romaji)
+							}
+							else{
+								return mediaCache.get(a).title.romaji.localeCompare(mediaCache.get(b).title.romaji)
+							}
+						}).forEach(entry => {
+							let entryRow = create("div","entry",mediaCache.get(entry).title.romaji,listEntries)
+						})
+					})
+				}
+				if(personalMangaList){
+					renderList()
+				}
+				else{
+					let loader = create("div",false,"loading list...",content)
+					authAPIcall(
+`
+query($name: String!){
+	MediaListCollection(userName: $name, type: MANGA){
+		lists{
+			name
+			isCustomList
+			entries{
+				... mediaListEntry
+			}
+		}
+	}
+}
+
+fragment mediaListEntry on MediaList{
+	mediaId
+	status
+	progress
+	progressVolumes
+	repeat
+	notes
+	startedAt{
+		year
+		month
+		day
+	}
+	media{
+		chapters
+		volumes
+		duration
+		nextAiringEpisode{episode}
+		format
+		title{romaji native english}
+		tags{name}
+		genres
+		meanScore
+		studios{nodes{isAnimationStudio id name}}
+	}
+	scoreRaw: score(format: POINT_100)
+}`,
+						{name: settings.me.name},
+						function(data){
+							if(!data){
+								loader.innerText = "failed to load list";
+								console.log("failed to load list");
+								return
+							}
+							personalMangaList = [];
+							data.data.MediaListCollection.lists.forEach(list => {
+								let listEntry = {
+									name: list.name,
+									isCustomList: list.isCustomList,
+									entries: []
+								};
+								list.entries.forEach(entry => {
+									mediaCache.set(entry.mediaId,entry.media);
+									entryCache.set(entry.mediaId,{
+										status: entry.status,
+										progress: entry.progress,
+										progressVolumes: entry.progressVolumes,
+										type: "MANGA",
+										repeat: entry.repeat,
+										notes: entry.notes,
+										startedAt: entry.startedAt,
+										mediaId: entry.mediaId,
+										scoreRaw: entry.scoreRaw
+									});
+									listEntry.entries.push(entry.mediaId)
+								});
+								personalMangaList.push(listEntry)
+							});
+							renderList()
+						}
+					)
+				}
 			}
 			else{
 				create("div","error","You are not signed in. Go to 'settings' for login options",content);

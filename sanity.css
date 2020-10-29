@@ -453,3 +453,27 @@ video{
 .activity:hover .editor-link{
 	display: inline;
 }
+.list-section{
+	margin-right: 5%;
+}
+.list-entries .entry,
+.list-head{
+	display: flex;
+	justify-content: space-between;
+	padding: 4px;
+}
+.list-entries .entry:nth-child(odd){
+	background: rgb(var(--color-foreground));
+}
+.entry .name{
+	width: 30%;
+}
+.entry .score{
+	width: 10%;
+}
+.entry .progress{
+	width: 10%;
+}
+.list-heading{
+	font-weight: bold;
+}
