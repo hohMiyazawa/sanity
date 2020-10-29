@@ -56,9 +56,11 @@ function loader(){
 const icons = {
 	heart: "♥️",
 	talk: "💬",
-	envelope : "✉",
-	cross : "✕",
-	like : "♥"
+	envelope: "✉",
+	cross: "✕",
+	like: "♥",
+	link: "🔗",
+	edit: "✎"
 }
 
 function saveAs(data,fileName,pureText){
@@ -434,6 +436,26 @@ const retrieve_cache = function(cache_name,amount,filterFunction,optionalName){
 	return returnList
 }
 
+const deleteActivity = function(id){
+	let act = activity_map.get(activity.id);
+	if(!act){
+		return
+	}
+	Object.keys(act.cache).forEach(cache => {
+		let head = cache_heads[cache];
+		if(head.activity.id === activity.id){
+			cache_heads[cache] = act.cache[cache]
+		}
+		else{
+			while(head.cache[cache].activity.id !== activity.id){
+				head = head.cache[cache]
+			}
+			head.cache[cache] = act.cache[cache]
+		}
+	})
+	activity_map.delete(activity.id)
+}
+
 let defaultSettings = {
 	defaultFeed: "following",
 	theme: "dark",
@@ -448,6 +470,8 @@ let defaultSettings = {
 	videoMaxwidth: 80,
 	oldstyle: false,
 	openReplies: false,
+	pollingInterval: 120,
+	confirmDeleteActivity: true,
 	cacheDelays: {
 		replyHover: 10*60*1000,
 		replyClick: 1*60*1000,
@@ -587,8 +611,50 @@ document.addEventListener("mousemove",function(event){
 
 let formatActivity = function(activity,options){
 	let postWrap = create("div","activity",false);
+	if(options.standalone){
+		postWrap.classList.add("standalone")
+	}
 	postWrap.dataset.activity = activity.id;
 	let item = create("div","post","",postWrap);
+	let rightActions = create("div","right-actions",false,postWrap);
+		let actLink = create("span","ilink",icons.link,rightActions);
+		actLink.title = activity.id;
+		actLink.onclick = function(){
+			viewSingleActivity(activity.id);
+		}
+		if(activity.user.name === settings.me.name){
+			if(activity.type === "TEXT"){
+				let editLink = create("span","ilink",icons.edit,rightActions);
+				editLink.title = "edit";
+				editLink.onclick = function(){}
+			}
+			let deleteLink = create("span",["ilink","delete"],icons.cross,rightActions);
+			deleteLink.title = "delete activity";
+			deleteLink.onclick = function(){
+				let confirmAction;
+				if(settings.confirmDeleteActivity){
+					confirmAction = confirm("Delete activity?")
+				}
+				else{
+					confirmAction = true
+				}
+				if(confirmAction){
+					postWrap.style.display = "none";
+					authAPIcall(
+						`mutation($id: Int){DeleteActivity(id: $id){deleted}}`,
+						{id: activity.id},
+						function(data){
+							if(!data || !data.data.DeleteActivity.deleted){
+								postWrap.style.display = "block"//failed deletion
+							}
+							else{
+								deleteActivity(activity.id)
+							}
+						}
+					)
+				}
+			}
+		}
 	let header = create("div","header",false,item);
 	let user = create("span","ilink",activity.user.name,header);
 	if(activity.user.name === settings.me.name){
@@ -633,7 +699,7 @@ let formatActivity = function(activity,options){
 		}
 	}
 	let actions = create("div","actions",false,item);
-	let replies = create("span",["action","replies"],(activity.replies.length || "") + "💬",actions);
+	let replies = create("span",["action","replies"],(activity.replies.length || "") + icons.talk,actions);
 	let replyWrap = null;
 	replies.onclick = function(){
 		postWrap.classList.toggle("replies-open");
@@ -687,6 +753,31 @@ let formatActivity = function(activity,options){
 				createText.placeholder = "Write a reply...";
 			let publishButton = create("button",["button","publish-action","publish"],"Publish",createReply,"margin-right: 12px;");
 			let cancelButton = create("button",["button","publish-action","grey"],"Cancel",createReply);
+			let preview = create("div",["preview","markdown"],false,createReply);
+				createText.oninput = function(){
+					preview.innerHTML = makeHtml(createText.value)
+				}
+				cancelButton.onclick = function(){
+					createText.value = "";
+					preview.innerHTML = "";
+				}
+				publishButton.onclick = function(){
+					if(createText.value){
+						publishButton.classList.add("disabled");
+						authAPIcall(
+							`mutation($text: String,$activityId: Int){SaveActivityReply(text: $text,activityId: $activityId){id}}`,
+							{
+								text: emojiSanitize(createText.value),
+								activityId: activity.id
+							},
+							function(data){
+								publishButton.classList.remove("disabled");
+								createText.value = "";
+								preview.innerHTML = "";
+							}
+						)
+					}
+				}
 		}
 	}
 	if(options.openReplies || (options.autoOpen && activity.replies.length)){
@@ -756,15 +847,19 @@ let activeTab;
 						preview.innerHTML = "";
 					}
 					publishButton.onclick = function(){
-						authAPIcall(
-							`mutation($text: String){SaveTextActivity(text: $text){id}}`,
-							{text: emojiSanitize(createText.value)},
-							function(data){
-								createText.value = "";
-								preview.innerHTML = "";
-								updateMode(currentFeed)
-							}
-						)
+						if(createText.value){
+							publishButton.classList.add("disabled");
+							authAPIcall(
+								`mutation($text: String){SaveTextActivity(text: $text){id}}`,
+								{text: emojiSanitize(createText.value)},
+								function(data){
+									publishButton.classList.remove("disabled");
+									createText.value = "";
+									preview.innerHTML = "";
+									updateMode(currentFeed)
+								}
+							)
+						}
 					}
 
 				let postContent = create("div","feed",false,content);
@@ -1250,6 +1345,7 @@ fragment mediaListEntry on MediaList{
 			createCheckboxSetting("renderCards","Render media cards");
 			createCheckboxSetting("oldstyle","Oldstyle feed layout");
 			createCheckboxSetting("openReplies","Open all replies by default");
+			createCheckboxSetting("confirmDeleteActivity","Ask for confirmation when deleting activity");
 			create("hr","divider",false,content);
 			let exportButton = create("button","button","Export settings",content);
 			let importButton = create("button","button","Import settings",content);
@@ -1342,17 +1438,20 @@ if(settings.accessToken){
 	let notificationMenu = create("div",["notifications","ilink"],false,nav);
 	create("span","label","Notifications",notificationMenu);
 	let notificationCount = create("div","count",false,notificationMenu);
+	let notsData;
+	let renderRequest = false;
+	let sidebarApp = null;
 	notificationCount.onclick = function(){
 		notificationCount.innerText = "";
+		if(notsData && sidebarApp){
+			notsData.data.Viewer.unreadNotificationCount = 0
+		}
 		authAPIcall(
 			"query{Notification(resetNotificationCount: true){... on ActivityLikeNotification{id}}}",
 			{},
 			function(data){}
 		)
 	}
-	let notsData;
-	let renderRequest = false;
-	let sidebarApp = null;
 	let callNots = function(){
 		authAPIcall(
 `
@@ -1446,6 +1545,9 @@ query{
 			}
 		)
 	};callNots();
+	let poller = setInterval(function(){
+		authAPIcall(`query{Viewer{unreadNotificationCount}}`,{},function(data){notificationCount.innerText = data.data.Viewer.unreadNotificationCount || ""})
+	},settings.pollingInterval*1000)
 	let renderNots = function(){
 		if(!sidebarApp){
 			sidebarApp = occupy_sidebar("Notifications",function(){sidebarApp = null})
@@ -1509,6 +1611,9 @@ query{
 					if(cacheItem){
 						create("span",false," [" + extractKeywords(cacheItem.activity.text)[0] + "]",noti)
 					}
+				}
+				activityLink.onclick = function(){
+					viewSingleActivity(notification.activity.id)
 				}
 			}
 			else{

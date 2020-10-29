@@ -99,6 +99,24 @@ body.theme-lum{
 	border-radius: 3px;
 	position: relative;
 	padding: 10px;
+	margin-right: 20px;
+}
+.right-actions{
+	position: absolute;
+	width: 20px;
+	height: 100%;
+	top: 0px;
+	right: 0px;
+	display: flex;
+	flex-direction: column;
+	justify-content: space-between;
+}
+.right-actions .ilink{
+	margin-left: auto;
+	margin-right: auto;
+}
+.right-actions .ilink.delete{
+	color: red;
 }
 .markdown img{
 	max-width: 100%;
@@ -255,6 +273,7 @@ body.theme-lum{
 }
 .activity{
 	margin: 10px;
+	position: relative;
 }
 .activity.replies-open{
 	border-right: dashed;
@@ -301,7 +320,8 @@ video{
 .button.grey{
 	background: grey;
 }
-.button:disabled{
+.button:disabled,
+.button.disabled{
 	opacity: 0.5;
 	cursor: default;
 }
