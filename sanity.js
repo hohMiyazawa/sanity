@@ -1245,12 +1245,28 @@ query{
 							return indexa - indexb
 					}).forEach(list => {
 						let listWrap = create("div","list-wrap",false,listArea);
+						let hider = create("span","toggler","[+]",listWrap);
 						create("h3","section-name",list.name,listWrap);
+						listWrap.appendChild(document.createTextNode(" "));
+						create("span","list-count",list.entries.length,listWrap);
 						let listSection = create("div","list-section",false,listWrap);
+						hider.onclick = function(){
+							if(hider.innerText === "[+]"){
+								hider.innerText = "[-]";
+								listSection.style.display = "none";
+							}
+							else{
+								hider.innerText = "[+]";
+								listSection.style.display = "block";
+							}
+						}
 						let listHead = create("div","list-head",false,listSection);
 							create("span","list-heading","Title",listHead,"width: 30%");
-							create("span","list-heading","Progress",listHead,"width: 10%");
-							create("span","list-heading","Score",listHead,"width: 10%");
+							create("span","list-heading","Progress",listHead,"width: 10%;text-align: center;");
+							create("span","list-heading","Score",listHead,"width: 10%;text-align: center;");
+							if(list.isCustomList){
+								create("span","list-heading","Status",listHead,"width: 10%;text-align: center;");
+							}
 							create("span","list-heading","",listHead,"width: 10px");
 						let listEntries = create("div","list-entries",false,listSection);
 						list.entries.sort((a,b) => {
@@ -1267,6 +1283,9 @@ query{
 							let name = create("span","name",media.title.romaji,entryRow);
 							let progress = create("span","progress",listEntry.progress,entryRow);
 							let score = create("span","score",listEntry.scoreRaw || "",entryRow);
+							if(list.isCustomList){
+								let status = create("span","status",listEntry.status.toLowerCase(),entryRow);
+							}
 							let editorLink = create("span",["ilink","editor-link"],icons.edit,entryRow);
 							editorLink.title = "edit";
 							editorLink.onclick = function(){
@@ -1386,9 +1405,30 @@ fragment mediaListEntry on MediaList{
 							return indexa - indexb
 					}).forEach(list => {
 						let listWrap = create("div","list-wrap",false,listArea);
+						let hider = create("span","toggler","[+]",listWrap);
 						create("h3","section-name",list.name,listWrap);
+						listWrap.appendChild(document.createTextNode(" "));
+						create("span","list-count",list.entries.length,listWrap);
 						let listSection = create("div","list-section",false,listWrap);
+						hider.onclick = function(){
+							if(hider.innerText === "[+]"){
+								hider.innerText = "[-]";
+								listSection.style.display = "none";
+							}
+							else{
+								hider.innerText = "[+]";
+								listSection.style.display = "block";
+							}
+						}
 						let listHead = create("div","list-head",false,listSection);
+							create("span","list-heading","Title",listHead,"width: 30%");
+							create("span","list-heading","Progress",listHead,"width: 10%;text-align: center;");
+							create("span","list-heading","Volumes",listHead,"width: 10%;text-align: center;");
+							create("span","list-heading","Score",listHead,"width: 10%;text-align: center;");
+							if(list.isCustomList){
+								create("span","list-heading","Status",listHead,"width: 10%;text-align: center;");
+							}
+							create("span","list-heading","",listHead,"width: 10px");
 						let listEntries = create("div","list-entries",false,listSection);
 						list.entries.sort((a,b) => {
 							if(settings.me.mediaListOptions.rowOrder === "score"){
@@ -1398,7 +1438,21 @@ fragment mediaListEntry on MediaList{
 								return mediaCache.get(a).title.romaji.localeCompare(mediaCache.get(b).title.romaji)
 							}
 						}).forEach(entry => {
-							let entryRow = create("div","entry",mediaCache.get(entry).title.romaji,listEntries)
+							let media = mediaCache.get(entry);
+							let listEntry = entryCache.get(entry);
+							let entryRow = create("div","entry",false,listEntries);
+							let name = create("span","name",media.title.romaji,entryRow);
+							let progress = create("span","progress",listEntry.progress,entryRow);
+							let progressVolumes = create("span","progress-volumes",listEntry.progressVolumes,entryRow);
+							let score = create("span","score",listEntry.scoreRaw || "",entryRow);
+							if(list.isCustomList){
+								let status = create("span","status",listEntry.status.toLowerCase(),entryRow);
+							}
+							let editorLink = create("span",["ilink","editor-link"],icons.edit,entryRow);
+							editorLink.title = "edit";
+							editorLink.onclick = function(){
+								listEditor(entry,"MANGA_LIST",media.title.romaji)
+							}
 						})
 					})
 				}

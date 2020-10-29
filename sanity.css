@@ -453,9 +453,6 @@ video{
 .activity:hover .editor-link{
 	display: inline;
 }
-.list-section{
-	margin-right: 5%;
-}
 .list-entries .entry,
 .list-head{
 	display: flex;
@@ -470,10 +467,36 @@ video{
 }
 .entry .score{
 	width: 10%;
+	text-align: center;
 }
-.entry .progress{
+.entry .progress,
+.entry .progress-volumes{
 	width: 10%;
+	text-align: center;
+}
+.entry .status{
+	width: 10%;
+	text-align: center;
 }
 .list-heading{
 	font-weight: bold;
+}
+.toggler{
+	font-family: monospace;
+	cursor: pointer;
+	color: rgb(var(--color-blue));
+	position: absolute;
+	top: 0px;
+	right: 0px;
+}
+.section-name{
+	display: inline;
+}
+.list-count{
+	margin-left: 5px;
+}
+.list-wrap{
+	position: relative;
+	margin-right: 5%;
+	margin-top: 10px;
 }
