@@ -159,20 +159,25 @@ function authAPIcall(query,variables,callback,cache,fatalError){
 		})
 	};
 	let handleError = function(error){
-		console.error(error,variables);
-		if(error.errors){
-			if(
-				error.errors.some(thing => thing.message === "Invalid token")
-			){
-				settings.accessToken = "";
-				saveSettings();
-				alert("access token was retracted");
-				console.log("access token retracted");
-				return
+		if(fatalError !== "acceptable" || (error.errors.length === 1 && error.errors[0].message === "Not Found.")){
+			console.error(error,variables);
+			if(error.errors){
+				if(
+					error.errors.some(thing => thing.message === "Invalid token")
+				){
+					settings.accessToken = "";
+					saveSettings();
+					alert("access token was retracted");
+					console.log("access token retracted");
+					return
+				}
+			}
+			if(fatalError === "acceptable"){
+				throw "fatal error"
 			}
 		}
 		handleData(null);
-		if(fatalError){
+		if(fatalError === "fatal"){
 			throw "fatal error"
 		}
 	};
@@ -198,7 +203,7 @@ makeHtml = function(markdown){
 		if(images){
 			images.forEach(image => {
 				let imageParts = image.match(/^img(\d+%?)?\((.+?)\)$/i);
-				if(settings.displayImages && (settings.displayGifs || !imageParts[2].match(/\.gif$/i))){
+				if(settings.displayImages && (settings.displayGifs || !imageParts[2].match(/\.gifv?$/i))){
 					component = component.replace(image,`<img width="${imageParts[1] || ""}" src="${imageParts[2]}">`)
 				}
 				else if(!settings.displayGifs && imageParts[2].match(/\.gif$/i)){
@@ -564,6 +569,68 @@ let occupy_sidebar = function(title,destructor){
 	return appContent
 }
 
+let listEditor = function(mediaId,type,fallbackName){
+	let editor = occupy_sidebar(fallbackName);
+	editor.classList.add("editor");
+	let progress = create("input",["editor-input","input-number"],false,editor);
+	progress.type = "number";
+	progress.min = 0;
+	progress.step = 1;
+	create("span","label","Progress",editor,"margin-left: 5px");
+	create("hr","divider",false,editor);
+	let saveButton = create("button","button","Save",editor);
+	saveButton.onclick = function(){
+		authAPIcall(
+			`mutation($mediaId: Int,$progress: Int){SaveMediaListEntry(mediaId: $mediaId,progress: $progress){
+				mediaId
+				progress
+				status
+			}}`,
+			{
+				mediaId: mediaId,
+				progress: parseInt(progress.value)
+			},
+			function(data){
+				if(!data){
+					return
+				}
+				entryCache.set(mediaId,data.data.SaveMediaListEntry);
+			}
+		)
+	}
+	let insertValues = function(){
+		let entryData = entryCache.get(mediaId);
+		if(entryData){
+			progress.value = entryData.progress
+		}
+	}
+	if(entryCache.has(mediaId)){
+		insertValues()
+	}
+	else{
+		authAPIcall(
+			`query($id: Int,$name: String){
+				MediaList(mediaId: $id,userName: $name){
+					mediaId
+					progress
+					status
+				}
+			}`,
+			{id: mediaId,name: settings.me.name},
+			function(data){
+				console.log(data);
+				if(!data){
+					entryCache.set(mediaId,null)
+				}
+				else{
+					entryCache.set(mediaId,data.data.MediaList);
+					insertValues()
+				}
+			},false,"acceptable"
+		)
+	}
+}
+
 if(/#access_token/.test(document.URL)){
 	let tokenList = location.hash.split("&").map(a => a.split("="));
 	settings.accessToken = tokenList[0][1];
@@ -706,6 +773,11 @@ let formatActivity = function(activity,options){
 			else{
 				media.classList.add("manga")
 			}
+		}
+		let editorLink = create("span",["ilink","editor-link"],"→",header);
+		editorLink.title = "open list editor";
+		editorLink.onclick = function(){
+			listEditor(activity.media.id,activity.type,activity.media.title.romaji)
 		}
 	}
 	let actions = create("div","actions",false,item);
@@ -975,7 +1047,7 @@ query{
 				createdAt
 				user{name}
 				likes{name}
-				media{title{romaji}}
+				media{id title{romaji}}
 				progress
 				status
 				replies{
@@ -1250,7 +1322,7 @@ fragment mediaListEntry on MediaList{
 										repeat: entry.repeat,
 										notes: entry.notes,
 										startedAt: entry.startedAt,
-										media: entry.mediaId,
+										mediaId: entry.mediaId,
 										scoreRaw: entry.scoreRaw
 									});
 									listEntry.entries.push(entry.mediaId)
@@ -1565,11 +1637,29 @@ query{
 		)
 	};callNots();
 	let poller = setInterval(function(){
-		authAPIcall(`query{Viewer{unreadNotificationCount}}`,{},function(data){notificationCount.innerText = data.data.Viewer.unreadNotificationCount || ""})
+		authAPIcall(
+			`query{Viewer{unreadNotificationCount}}`,{},
+			function(data){
+				notificationCount.innerText = data.data.Viewer.unreadNotificationCount || "";
+				if(sidebarApp && data.data.Viewer.unreadNotificationCount > notsData.data.Viewer.unreadNotificationCount){
+					renderRequest = true;
+					callNots()
+				}
+				data.data.Viewer.unreadNotificationCount = notsData.data.Viewer.unreadNotificationCount
+			}
+		)
 	},settings.pollingInterval*1000)
 	let renderNots = function(){
 		if(!sidebarApp){
-			sidebarApp = occupy_sidebar("Notifications",function(){sidebarApp = null})
+			sidebarApp = occupy_sidebar("Notifications",function(){
+				authAPIcall(
+					"query{Notification(resetNotificationCount: true){... on ActivityLikeNotification{id}}}",
+					{},
+					function(data){}
+				)
+				notificationCount.innerText = "";
+				sidebarApp = null
+			})
 		}
 		removeChildren(sidebarApp)
 		notsData.data.Page.notifications.forEach((notification,index) => {

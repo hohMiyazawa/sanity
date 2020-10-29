@@ -263,6 +263,15 @@ body.theme-lum{
 	position: relative;
 	vertical-align: middle;
 }
+.input-number{
+	background: rgb(var(--color-background));
+	padding: 4px;
+	border-radius: 2px;
+	color: rgb(var(--max-contrast));
+}
+.editor-input.input-number{
+	width: 100px;
+}
 .filter .hohCheckbox{
 	padding-left: 25px;
 }
@@ -436,4 +445,11 @@ video{
 }
 .thisIsMe{
 	color: rgb(var(--color-peach));
+}
+.activity .editor-link{
+	margin-left: 10px;
+	display: none;
+}
+.activity:hover .editor-link{
+	display: inline;
 }
