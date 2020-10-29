@@ -99,17 +99,18 @@ body.theme-lum{
 	border-radius: 3px;
 	position: relative;
 	padding: 10px;
-	margin-right: 20px;
+	padding-right: 25px;
 }
 .right-actions{
 	position: absolute;
-	width: 20px;
+	width: 25px;
 	height: 100%;
 	top: 0px;
 	right: 0px;
 	display: flex;
 	flex-direction: column;
 	justify-content: space-between;
+	background: rgb(var(--color-base));
 }
 .right-actions .ilink{
 	margin-left: auto;
@@ -144,7 +145,7 @@ body.theme-lum{
 .actions{
 	position: absolute;
 	bottom: 3px;
-	right: 10px;
+	right: 30px;
 	user-select: none;
 }
 .actions .action{
@@ -291,6 +292,8 @@ body.theme-lum{
 	border-radius: 3px;
 	margin: 3px;
 	position: relative;
+	margin-right: 15px;
+	padding-right: 25px;
 }
 video{
 	max-width: 100%;
@@ -298,7 +301,7 @@ video{
 .activity time{
 	position: absolute;
 	top: 5px;
-	right: 12px;
+	right: 35px;
 	font-size: x-small;
 	font-weight: lighter;
 }
@@ -411,6 +414,10 @@ video{
 	border-width: 1px;
 	border-top: none;
 }
+.oldstyle .activity.replies-open .post{
+	border-bottom: solid;
+	border-bottom-width: 1px;
+}
 .oldstyle .post{
 	border-radius: 0px;
 }
@@ -425,6 +432,7 @@ video{
 	border-width: 1px;
 	border-top: none;
 	border-radius: 0px;
+	margin-right: 15px;
 }
 .thisIsMe{
 	color: rgb(var(--color-peach));

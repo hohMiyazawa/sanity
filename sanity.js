@@ -261,6 +261,15 @@ makeHtml = function(markdown){
 
 }
 
+function convertInternalLinks(node){
+	node.querySelectorAll('a[href^="?profile"]').forEach(lonk => {
+		lonk.onclick = function(e){
+			e.preventDefault();
+			viewSingleProfile(lonk.href.split("=")[1])
+		}
+	})
+}
+
 function emojiSanitize(string){
 	return Array.from(string).map(char => {
 		let codePoint = char.codePointAt(0);
@@ -616,7 +625,7 @@ let formatActivity = function(activity,options){
 	}
 	postWrap.dataset.activity = activity.id;
 	let item = create("div","post","",postWrap);
-	let rightActions = create("div","right-actions",false,postWrap);
+	let rightActions = create("div","right-actions",false,item);
 		let actLink = create("span","ilink",icons.link,rightActions);
 		actLink.title = activity.id;
 		actLink.onclick = function(){
@@ -670,6 +679,7 @@ let formatActivity = function(activity,options){
 		item.classList.add("text-post");
 		let markdown = create("div","markdown",false,item);
 		markdown.innerHTML = makeHtml(activity.text);
+		convertInternalLinks(markdown)
 	}
 	else if(activity.type === "MANGA_LIST" || activity.type === "ANIME_LIST"){
 		if(activity.status === "dropped"){
@@ -711,6 +721,11 @@ let formatActivity = function(activity,options){
 			replyWrap = create("div","reply-wrap",false,postWrap);
 			activity.replies.forEach(reply => {
 				let replyDiv = create("div","reply",false,replyWrap);
+				let rightActions = create("div","right-actions",false,replyDiv);
+					let replyReplyLink = create("span","ilink","←",rightActions);
+					replyReplyLink.onclick = function(){
+						replyWrap.querySelector("textarea").value += "@" + reply.user.name + " "
+					}
 				let header = create("div","header",false,replyDiv);
 				let time = create("time",false,relativeTime(reply.createdAt*1000),replyDiv);
 				time.setAttribute("datetime",(new Date(reply.createdAt*1000)).toISOString());
@@ -721,6 +736,7 @@ let formatActivity = function(activity,options){
 					}
 				let markdown = create("div","markdown",false,replyDiv);
 					markdown.innerHTML = makeHtml(reply.text);
+					convertInternalLinks(markdown)
 				let replyActions = create("div","actions",false,replyDiv);
 				let likes = create("span",["action","likes"],(reply.likes.length || "") + icons.like,replyActions);
 				if(reply.likes.some(like => like.name === settings.me.name)){
@@ -756,6 +772,7 @@ let formatActivity = function(activity,options){
 			let preview = create("div",["preview","markdown"],false,createReply);
 				createText.oninput = function(){
 					preview.innerHTML = makeHtml(createText.value)
+					convertInternalLinks(preview)
 				}
 				cancelButton.onclick = function(){
 					createText.value = "";
@@ -1099,6 +1116,7 @@ query{
 								let user = create("span","ilink",activity.user.name,header);
 								let markdown = create("div","markdown",false,item);
 								markdown.innerHTML = makeHtml(activity.text);
+								convertInternalLinks(markdown)
 								let actions = create("div","actions",false,item);
 								let likes = create("span",["action","likes"],(activity.likes.length || "") + "♥️",actions);
 								likes.title = activity.likes.map(user => user.name).join("\n")
