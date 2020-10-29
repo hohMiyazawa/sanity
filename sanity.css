@@ -167,7 +167,8 @@ body.theme-lum{
 .create{
 	padding: 10px;
 	width: calc(90% - 10px);
-	min-height: 75px;
+	min-height: 40px;
+	margin-bottom: 30px;
 }
 .create textarea{
 	width: 98%;

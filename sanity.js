@@ -159,7 +159,7 @@ function authAPIcall(query,variables,callback,cache,fatalError){
 		})
 	};
 	let handleError = function(error){
-		if(fatalError !== "acceptable" || (error.errors.length === 1 && error.errors[0].message === "Not Found.")){
+		if(fatalError !== "acceptable" || error.errors.length !== 1 || error.errors[0].message !== "Not Found."){
 			console.error(error,variables);
 			if(error.errors){
 				if(
@@ -572,11 +572,31 @@ let occupy_sidebar = function(title,destructor){
 let listEditor = function(mediaId,type,fallbackName){
 	let editor = occupy_sidebar(fallbackName);
 	editor.classList.add("editor");
-	let progress = create("input",["editor-input","input-number"],false,editor);
+	let progressRow = create("p","data-row",false,editor);
+	let progress = create("input",["editor-input","input-number"],false,progressRow);
 	progress.type = "number";
 	progress.min = 0;
 	progress.step = 1;
-	create("span","label","Progress",editor,"margin-left: 5px");
+	create("span","label","Progress",progressRow,"margin-left: 5px");
+
+	let progressVolumes;
+	if(type === "MANGA_LIST"){
+		let progressVolumesRow = create("p","data-row",false,editor);
+		let progressVolumes = create("input",["editor-input","input-number"],false,progressVolumesRow);
+		progressVolumes.type = "number";
+		progressVolumes.min = 0;
+		progressVolumes.step = 1;
+		create("span","label","Volumes",progressVolumesRow,"margin-left: 5px");
+	}
+
+	let scoreRow = create("p","data-row",false,editor);
+	let score = create("input",["editor-input","input-number"],false,scoreRow);
+	score.type = "number";
+	score.min = 0;
+	score.max = 100;
+	score.step = 1;
+	create("span","label","Score",scoreRow,"margin-left: 5px");
+
 	create("hr","divider",false,editor);
 	let saveButton = create("button","button","Add",editor);
 	saveButton.onclick = function(){
@@ -584,7 +604,9 @@ let listEditor = function(mediaId,type,fallbackName){
 			`mutation($mediaId: Int,$progress: Int){SaveMediaListEntry(mediaId: $mediaId,progress: $progress){
 				mediaId
 				progress
+				${type === "MANGA_LIST" ? "progressVolumes" : ""}
 				status
+				scoreRaw: score(format: POINT_100)
 			}}`,
 			{
 				mediaId: mediaId,
@@ -602,7 +624,11 @@ let listEditor = function(mediaId,type,fallbackName){
 		let entryData = entryCache.get(mediaId);
 		if(entryData){
 			saveButton.innerText = "Save";
-			progress.value = entryData.progress
+			progress.value = entryData.progress;
+			if(type === "MANGA_LIST"){
+				progressVolumes.value = entryData.progressVolumes;
+			}
+			score.value = entryData.scoreRaw;
 		}
 		else{
 			saveButton.innerText = "Add"
@@ -617,7 +643,9 @@ let listEditor = function(mediaId,type,fallbackName){
 				MediaList(mediaId: $id,userName: $name){
 					mediaId
 					progress
+					${type === "MANGA_LIST" ? "progressVolumes" : ""}
 					status
+					scoreRaw: score(format: POINT_100)
 				}
 			}`,
 			{id: mediaId,name: settings.me.name},
@@ -707,7 +735,13 @@ let formatActivity = function(activity,options){
 			if(activity.type === "TEXT"){
 				let editLink = create("span","ilink",icons.edit,rightActions);
 				editLink.title = "edit";
-				editLink.onclick = function(){}
+				editLink.onclick = function(){
+					content.scroll({
+						top: 0,
+						left: 0,
+						behavior: "smooth"
+					})
+				}
 			}
 			let deleteLink = create("span",["ilink","delete"],icons.cross,rightActions);
 			deleteLink.title = "delete activity";
@@ -754,30 +788,27 @@ let formatActivity = function(activity,options){
 		convertInternalLinks(markdown)
 	}
 	else if(activity.type === "MANGA_LIST" || activity.type === "ANIME_LIST"){
+		let media;
 		if(activity.status === "dropped"){
 			create("span","status"," dropped ",header);
-			let media = create("span","ilink",activity.media.title.romaji,header);
-			if(activity.type === "ANIME_LIST"){
-				media.classList.add("anime")
-			}
-			else{
-				media.classList.add("manga")
-			}
-			if(activity.progress){
-				create("span","status"," at " + (activity.type === "ANIME_LIST" ? " episode " : " chapter ")  + activity.progress,header)
-			}
+			media = create("span","ilink",activity.media.title.romaji,header)
+		}
+		else if(activity.status === "completed"){
+			create("span","status"," " + activity.status + " ",header);
+			create("span","status",activity.progress,header);
+			media = create("span","ilink",activity.media.title.romaji,header)
 		}
 		else{
 			create("span","status"," " + activity.status + " ",header);
 			create("span","status",activity.progress,header);
 			create("span","status"," of ",header);
-			let media = create("span","ilink",activity.media.title.romaji,header);
-			if(activity.type === "ANIME_LIST"){
-				media.classList.add("anime")
-			}
-			else{
-				media.classList.add("manga")
-			}
+			media = create("span","ilink",activity.media.title.romaji,header)
+		}
+		if(activity.type === "ANIME_LIST"){
+			media.classList.add("anime")
+		}
+		else{
+			media.classList.add("manga")
 		}
 		let editorLink = create("span",["ilink","editor-link"],"→",header);
 		editorLink.title = "open list editor";
@@ -796,6 +827,9 @@ let formatActivity = function(activity,options){
 		}
 		else{
 			replyWrap = create("div","reply-wrap",false,postWrap);
+			let createText;
+			let replyEditId = null;
+			let publishButton;
 			activity.replies.forEach(reply => {
 				let replyDiv = create("div","reply",false,replyWrap);
 				let rightActions = create("div","right-actions",false,replyDiv);
@@ -803,6 +837,20 @@ let formatActivity = function(activity,options){
 					replyReplyLink.title = "mention";
 					replyReplyLink.onclick = function(){
 						replyWrap.querySelector("textarea").value += "@" + reply.user.name + " "
+					}
+					if(reply.user.name === settings.me.name){
+						let editLink = create("span","ilink",icons.edit,rightActions);
+						editLink.title = "edit";
+						let deleteLink = create("span",["ilink","delete"],icons.cross,rightActions);
+						deleteLink.title = "delete";
+						deleteLink.onclick = function(){
+							alert("not implemented")
+						}
+						editLink.onclick = function(){
+							createText.value = reply.text;
+							replyEditId = reply.id;
+							publishButton.innerText = "Update"
+						}
 					}
 				let header = create("div","header",false,replyDiv);
 				let time = create("time",false,relativeTime(reply.createdAt*1000),replyDiv);
@@ -842,10 +890,10 @@ let formatActivity = function(activity,options){
 				}
 			})
 			let createReply = create("div","create",false,replyWrap);
-			let createText = create("textarea",false,false,createReply);
+			createText = create("textarea",false,false,createReply);
 				createText.setAttribute("autocomplete","off");
 				createText.placeholder = "Write a reply...";
-			let publishButton = create("button",["button","publish-action","publish"],"Publish",createReply,"margin-right: 12px;");
+			publishButton = create("button",["button","publish-action","publish"],"Publish",createReply,"margin-right: 12px;");
 			let cancelButton = create("button",["button","publish-action","grey"],"Cancel",createReply);
 			let preview = create("div",["preview","markdown"],false,createReply);
 				createText.oninput = function(){
@@ -855,22 +903,29 @@ let formatActivity = function(activity,options){
 				cancelButton.onclick = function(){
 					createText.value = "";
 					preview.innerHTML = "";
+					replyEditId = null;
+					publishButton.innerText = "Publish"
 				}
 				publishButton.onclick = function(){
 					if(createText.value){
-						publishButton.classList.add("disabled");
-						authAPIcall(
-							`mutation($text: String,$activityId: Int){SaveActivityReply(text: $text,activityId: $activityId){id}}`,
-							{
-								text: emojiSanitize(createText.value),
-								activityId: activity.id
-							},
-							function(data){
-								publishButton.classList.remove("disabled");
-								createText.value = "";
-								preview.innerHTML = "";
-							}
-						)
+						if(replyEditId){
+							publishButton.classList.add("disabled");
+							authAPIcall(
+								`mutation($text: String,$activityId: Int){SaveActivityReply(text: $text,activityId: $activityId){id}}`,
+								{
+									text: emojiSanitize(createText.value),
+									activityId: activity.id
+								},
+								function(data){
+									publishButton.classList.remove("disabled");
+									createText.value = "";
+									preview.innerHTML = "";
+								}
+							)
+						}
+						else{
+							alert("not implemented")
+						}
 					}
 				}
 		}
@@ -931,15 +986,19 @@ let activeTab;
 				let createText = create("textarea",false,false,createPost);
 					createText.setAttribute("autocomplete","off");
 					createText.placeholder = "Write a status...";
+					createText.rows = 1;
+					createText.setAttribute("spellcheck","true");
 				let publishButton = create("button",["button","publish-action","publish"],"Publish",createPost,"margin-right: 12px;");
 				let cancelButton = create("button",["button","publish-action","grey"],"Cancel",createPost);
 				let preview = create("div",["preview","markdown"],false,createPost);
 					createText.oninput = function(){
-						preview.innerHTML = makeHtml(createText.value)
+						preview.innerHTML = makeHtml(createText.value);
+						createText.rows = createText.value.split("\n").length
 					}
 					cancelButton.onclick = function(){
 						createText.value = "";
 						preview.innerHTML = "";
+						createText.rows = 1;
 					}
 					publishButton.onclick = function(){
 						if(createText.value){
@@ -1262,7 +1321,7 @@ query{
 						}
 						let listHead = create("div","list-head",false,listSection);
 							create("span","list-heading","Title",listHead,"width: 30%");
-							create("span","list-heading","Progress",listHead,"width: 10%;text-align: center;");
+							create("span","list-heading","Episodes",listHead,"width: 10%;text-align: center;");
 							create("span","list-heading","Score",listHead,"width: 10%;text-align: center;");
 							if(list.isCustomList){
 								create("span","list-heading","Status",listHead,"width: 10%;text-align: center;");
@@ -1422,7 +1481,7 @@ fragment mediaListEntry on MediaList{
 						}
 						let listHead = create("div","list-head",false,listSection);
 							create("span","list-heading","Title",listHead,"width: 30%");
-							create("span","list-heading","Progress",listHead,"width: 10%;text-align: center;");
+							create("span","list-heading","Chapters",listHead,"width: 10%;text-align: center;");
 							create("span","list-heading","Volumes",listHead,"width: 10%;text-align: center;");
 							create("span","list-heading","Score",listHead,"width: 10%;text-align: center;");
 							if(list.isCustomList){
@@ -1573,6 +1632,8 @@ fragment mediaListEntry on MediaList{
 			create("p",false,"If the selected client redirects to a different instance of sAnity, you will have to copy-paste the access token into the field below:",content);
 			create("p",false,"(If you're using Automail v9.96.3+, you can also grab an access token from the bottom of its settings page. sAnity will then use the same login as Automail)",content);
 			let accessTokenField = create("textarea",false,false,content,"display: block");
+			accessTokenField.setAttribute("spellcheck","false");
+			accessTokenField.setAttribute("wrap","hard");
 			accessTokenField.onclick = function(){
 				accessTokenField.focus();
 				accessTokenField.select()
