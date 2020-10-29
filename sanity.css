@@ -26,6 +26,9 @@ body{
 	--color-background: 0,60,60;
 	--color-foreground: 0,128,128;
 }
+a{
+	color: rgb(var(--color-blue));
+}
 body{
 	background: rgb(var(--color-background));
 	color: rgb(var(--color-text));
@@ -138,6 +141,8 @@ body.theme-lum{
 .filter .mode{
 	padding: 5px;
 	cursor: pointer;
+	background: rgb(var(--color-background));
+	padding: 2px;
 }
 .filter .mode:hover{
 	color: rgb(var(--max-contrast));
@@ -370,6 +375,9 @@ video{
 }
 #footer .links{
 	display: inline-block;
+}
+#footer .links a{
+	padding: 10px;
 }
 .themes{
 	float: right;
