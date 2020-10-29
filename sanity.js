@@ -723,6 +723,7 @@ let formatActivity = function(activity,options){
 				let replyDiv = create("div","reply",false,replyWrap);
 				let rightActions = create("div","right-actions",false,replyDiv);
 					let replyReplyLink = create("span","ilink","←",rightActions);
+					replyReplyLink.title = "mention";
 					replyReplyLink.onclick = function(){
 						replyWrap.querySelector("textarea").value += "@" + reply.user.name + " "
 					}
@@ -1689,3 +1690,14 @@ else if(settings.theme === "lum"){
 	document.body.classList.add("theme-lum");
 	document.body.classList.remove("theme-dark")
 }
+
+let welcomeBar = occupy_sidebar("Welcome");
+
+create("p",false,"This is the sidebar.",welcomeBar);
+create("p",false,"You can put various stuff here, but to get you started, here are a few tips:",welcomeBar);
+create("p",false,'1. To sign in, go to "settings" and follow the instructions there',welcomeBar);
+create("p",false,"2. Don't reload the page, this kills the efficient cache of sAnity. If you still need to reload the page for any reason, that's a bug and you should report it",welcomeBar);
+create("p",false,"3. It's a waste of time talking about sAnity on Anilist.co",welcomeBar);
+create("hr","divider",false,welcomeBar);
+create("p",false,"News",welcomeBar);
+create("p",false,"You are using the pre-alpha version of sAnity. Things are missing and broken!",welcomeBar);
