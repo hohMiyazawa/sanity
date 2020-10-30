@@ -102,6 +102,8 @@ else{
 	}
 }
 
+const statusList = ["CURRENT","PLANNING","COMPLETED","REPEATING","PAUSED","DROPPED"];
+
 const url = "https://graphql.anilist.co";//Current Anilist API location
 let handleResponse = function(response){
 	console.log(response.headers.get("x-ratelimit-limit"));
@@ -293,7 +295,7 @@ function extractKeywords(text,number){
 		- words.filter(v => v === b).length)
 		|| (a === a.toUpperCase()) - (b === b.toUpperCase())
 	).filter(
-		word => !["in","the","it","It's","is","are","I","I'm","you","with","for"].includes(word) && word.length < 30
+		word => !["in","the","it","It's","is","are","I","I'm","you","with","for","on"].includes(word) && word.length < 30
 	)
 	if(!sorted.length){
 		if(text.match(/img/i)){
@@ -573,6 +575,15 @@ let listEditor = function(mediaId,type,fallbackName){
 	let editor = occupy_sidebar(fallbackName);
 	editor.classList.add("editor");
 	let saveButton = create("button","button","Add",editor);
+
+	let statusRow = create("p","data-row",false,editor);
+	let status = create("select",["editor-input","input-select"],false,statusRow);
+	statusList.forEach(stat => {
+		create("option","status",stat.toLowerCase(),status)
+	});
+	status.value = "";
+	create("span","label","Status",statusRow,"margin-left: 5px");
+
 	let progressRow = create("p","data-row",false,editor);
 	let progress = create("input",["editor-input","input-number"],false,progressRow);
 	progress.type = "number";
@@ -630,14 +641,18 @@ let listEditor = function(mediaId,type,fallbackName){
 	create("hr","divider",false,editor);
 	saveButton.onclick = function(){
 		authAPIcall(
-			`mutation($mediaId: Int,$progress: Int){SaveMediaListEntry(mediaId: $mediaId,progress: $progress){
-				mediaId
-				progress
-				${type === "MANGA_LIST" ? "progressVolumes" : ""}
-				status
-				notes
-				scoreRaw: score(format: POINT_100)
-			}}`,
+`mutation($mediaId: Int,$progress: Int){SaveMediaListEntry(mediaId: $mediaId,progress: $progress){
+	mediaId
+	progress
+	${type === "MANGA_LIST" ? "progressVolumes" : ""}
+	status
+	notes
+	repeat
+	priority
+	startedAt{year month day}
+	completedAt{year month day}
+	scoreRaw: score(format: POINT_100)
+}}`,
 			{
 				mediaId: mediaId,
 				progress: parseInt(progress.value)
@@ -660,6 +675,23 @@ let listEditor = function(mediaId,type,fallbackName){
 			}
 			score.value = entryData.scoreRaw || "";
 			notes.value = entryData.notes;
+			priority.value = entryData.priority;
+			repeat.value = entryData.repeat;
+			if(entryData.startedAt.year){
+				startDate.value = new Date(
+					entryData.startedAt.year,
+					(entryData.startedAt.month || 1) - 1,
+					entryData.startedAt.day || 1
+				).toISOString().split("T")[0]
+			}
+			if(entryData.completedAt.year){
+				endDate.value = new Date(
+					entryData.completedAt.year,
+					(entryData.completedAt.month || 1) - 1,
+					entryData.completedAt.day || 1
+				).toISOString().split("T")[0]
+			}
+
 			let deleteButton = create("button",["button","danger"],"Delete",editor);
 			deleteButton.onclick = function(){
 				alert("not implemented")
@@ -674,16 +706,20 @@ let listEditor = function(mediaId,type,fallbackName){
 	}
 	else{
 		authAPIcall(
-			`query($id: Int,$name: String){
-				MediaList(mediaId: $id,userName: $name){
-					mediaId
-					progress
-					${type === "MANGA_LIST" ? "progressVolumes" : ""}
-					status
-					notes
-					scoreRaw: score(format: POINT_100)
-				}
-			}`,
+`query($id: Int,$name: String){
+	MediaList(mediaId: $id,userName: $name){
+		mediaId
+		progress
+		${type === "MANGA_LIST" ? "progressVolumes" : ""}
+		status
+		notes
+		repeat
+		priority
+		startedAt{year month day}
+		completedAt{year month day}
+		scoreRaw: score(format: POINT_100)
+	}
+}`,
 			{id: mediaId,name: settings.me.name},
 			function(data){
 				console.log(data);
@@ -1428,11 +1464,8 @@ fragment mediaListEntry on MediaList{
 	progress
 	repeat
 	notes
-	startedAt{
-		year
-		month
-		day
-	}
+	startedAt{year month day}
+	completedAt{year month day}
 	media{
 		episodes
 		duration
@@ -1469,6 +1502,7 @@ fragment mediaListEntry on MediaList{
 										repeat: entry.repeat,
 										notes: entry.notes,
 										startedAt: entry.startedAt,
+										completedAt: entry.completedAt,
 										mediaId: entry.mediaId,
 										scoreRaw: entry.scoreRaw
 									});
@@ -1605,11 +1639,8 @@ fragment mediaListEntry on MediaList{
 	progressVolumes
 	repeat
 	notes
-	startedAt{
-		year
-		month
-		day
-	}
+	startedAt{year month day}
+	completedAt{year month day}
 	media{
 		chapters
 		volumes
@@ -1645,6 +1676,7 @@ fragment mediaListEntry on MediaList{
 										repeat: entry.repeat,
 										notes: entry.notes,
 										startedAt: entry.startedAt,
+										completedAt: entry.completedAt,
 										mediaId: entry.mediaId,
 										scoreRaw: entry.scoreRaw
 									});
@@ -1884,7 +1916,7 @@ query{
 	}
 	Page(perPage: 25){
 		notifications{
-... on AiringNotification{type}
+... on AiringNotification{type episode media{id title{native romaji english}}}
 ... on FollowingNotification{type}
 ... on ActivityMessageNotification{
 	type user{name}
@@ -1931,9 +1963,11 @@ query{
 	type user{name}
 	activity{
 ... on TextActivity{
+	id
 	type
 }
 ... on ListActivity{
+	id
 	type
 	progress
 }
@@ -2075,6 +2109,13 @@ query{
 			}
 			else if(notification.type === "ACTIVITY_MENTION"){
 				create("span",false," mentioned you",noti)
+			}
+			else if(notification.type === "AIRING"){
+				create("span",false,"Episode ",noti);
+				create("span",false,notification.episode,noti);
+				create("span",false," of ",noti);
+				let mediaLink = create("span","ilink",notification.media.title.romaji,noti);
+				create("span",false," aired",noti);
 			}
 			else{
 				noti.innerText = notification.type
