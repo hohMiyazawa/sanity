@@ -1,3 +1,42 @@
+/*
+    sAnity - free client for Anilist.co
+    Copyright (C) 2020  hoh miyazawa
+
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program.  If not, see <https://www.gnu.org/licenses/>.
+*/
+/*
+    Contact:
+        https://github.com/hohMiyazawa/sanity
+        https://anilist.co/user/hoh/
+*/
+if(!window.showdown){
+	alert("missing file 'showdown.js'")
+	throw "fatal error"
+}
+if(!config){
+	alert("missing file 'config.js'")
+	window.config = {//generic config
+		URL: "",
+		API_id: 0,
+		API_label: ""
+	}
+}
+if(!window.DOMPurify){
+	alert("missing file 'purify.js'. sAnity will still work, but this is a potential security hole");
+	window.DOMPurify({sanitize: function(text){return text.replace(/script/i,"")}})//make a token effort anyway
+}
+
 function create(type,classes,text,appendLocation,cssText){
 	let element = document.createElement(type);
 	if(Array.isArray(classes)){
@@ -194,6 +233,7 @@ showdown.setOption("tables", false);
 showdown.setOption("simpleLineBreaks", true);
 showdown.setOption("simplifiedAutoLink", true);
 showdown.setOption("ghMentionsLink", "?profile={u}");
+
 const converter = new showdown.Converter();
 
 makeHtml = function(markdown){
@@ -579,7 +619,8 @@ let listEditor = function(mediaId,type,fallbackName){
 	let statusRow = create("p","data-row",false,editor);
 	let status = create("select",["editor-input","input-select"],false,statusRow);
 	statusList.forEach(stat => {
-		create("option","status",stat.toLowerCase(),status)
+		let option = create("option","status",stat.toLowerCase(),status);
+		option.value = stat
 	});
 	status.value = "";
 	create("span","label","Status",statusRow,"margin-left: 5px");
@@ -669,6 +710,7 @@ let listEditor = function(mediaId,type,fallbackName){
 		let entryData = entryCache.get(mediaId);
 		if(entryData){
 			saveButton.innerText = "Save";
+			status.value = entryData.status;
 			progress.value = entryData.progress;
 			if(type === "MANGA_LIST"){
 				progressVolumes.value = entryData.progressVolumes;
@@ -1811,7 +1853,7 @@ fragment mediaListEntry on MediaList{
 	}
 });
 
-function viewSingleProfile(name){
+function viewSingleProfile(name){//hot single weebs near you
 	removeChildren(content);
 	updateUrl("?profile=" + name);
 	removeChildren(content);
@@ -2004,6 +2046,9 @@ query{
 		authAPIcall(
 			`query{Viewer{unreadNotificationCount}}`,{},
 			function(data){
+				if(!data){//the network may sometimes fail. No big deal, just silently ignore borked updates
+					return
+				}
 				notificationCount.innerText = data.data.Viewer.unreadNotificationCount || "";
 				if(sidebarApp && data.data.Viewer.unreadNotificationCount > notsData.data.Viewer.unreadNotificationCount){
 					renderRequest = true;
