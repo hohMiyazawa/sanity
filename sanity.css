@@ -197,6 +197,9 @@ body.theme-lum{
 }
 .post .markdown{
 	margin-bottom: 12px;
+	max-height: 1000px;
+	overflow-y: auto;
+	scrollbar-width: thin;
 }
 .markdown_spoiler{
 	background: rgb(31, 35, 45);
@@ -291,9 +294,6 @@ body.theme-lum{
 .activity{
 	margin: 10px;
 	position: relative;
-	max-height: 1000px;
-	overflow-y: auto;
-	scrollbar-width: thin;
 }
 .activity:not(.standalone).replies-open{
 	border-right: dashed;

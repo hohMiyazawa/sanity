@@ -1890,7 +1890,7 @@ query{
 	type user{name}
 	activityId
 }
-... on ActivityMentionNotification{type}
+... on ActivityMentionNotification{type user{name}}
 ... on ActivityReplyNotification{
 	type user{name}
 	activity{
@@ -1944,7 +1944,10 @@ query{
 ... on ThreadCommentSubscribedNotification{type}
 ... on ThreadCommentLikeNotification{type}
 ... on ThreadLikeNotification{type}
-... on RelatedMediaAdditionNotification{type}
+... on RelatedMediaAdditionNotification{
+	type
+	media{id type title{romaji native english}}
+}
 		}
 	}
 }`,
@@ -2062,6 +2065,16 @@ query{
 				activityLink.onclick = function(){
 					viewSingleActivity(notification.activity.id)
 				}
+			}
+			else if(notification.type === "RELATED_MEDIA_ADDITION"){
+				create("span",false,"New media added: ",noti);
+				let mediaLink = create("span","ilink",notification.media.title.romaji,noti);
+				if(notification.media.type === "MANGA_LIST"){
+					mediaLink.classList.add("manga")
+				}
+			}
+			else if(notification.type === "ACTIVITY_MENTION"){
+				create("span",false," mentioned you",noti)
 			}
 			else{
 				noti.innerText = notification.type
