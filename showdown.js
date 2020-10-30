@@ -5139,5 +5139,3 @@ if (typeof define === 'function' && define.amd) {
   root.showdown = showdown;
 }
 }).call(this);
-
-//# sourceMappingURL=showdown.js.map

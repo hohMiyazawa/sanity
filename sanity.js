@@ -818,7 +818,7 @@ let formatActivity = function(activity,options){
 	let time = create("time",false,relativeTime(activity.createdAt*1000),item);
 	time.setAttribute("datetime",(new Date(activity.createdAt*1000)).toISOString());
 	time.title = (new Date(activity.createdAt*1000)).toLocaleString();
-	if(activity.type === "TEXT"){
+	if(activity.type === "TEXT" || activity.type === "MESSAGE"){
 		item.classList.add("text-post");
 		let markdown = create("div","markdown",false,item);
 		markdown.innerHTML = makeHtml(activity.text);
@@ -1794,7 +1794,7 @@ let viewSingleActivity = function(id){
 	else{
 		content.appendChild(loader())
 	}
-	generalAPIcall(
+	authAPIcall(
 		`query($id: Int){
 			Activity(id: $id){
 				... on TextActivity{
@@ -1803,6 +1803,22 @@ let viewSingleActivity = function(id){
 					createdAt
 					text
 					user{name}
+					likes{name}
+					replies{
+						id
+						createdAt
+						text
+						user{name}
+						likes{name}
+					}
+				}
+				... on MessageActivity{
+					id
+					type
+					createdAt
+					text: message
+					user: messenger{name}
+					recipient{name}
 					likes{name}
 					replies{
 						id
@@ -1867,26 +1883,23 @@ query{
 	}
 	Page(perPage: 25){
 		notifications{
-... on AiringNotification{id type}
-... on FollowingNotification{id type}
-... on ActivityMessageNotification{id type}
-... on ActivityMentionNotification{id type}
+... on AiringNotification{type}
+... on FollowingNotification{type}
+... on ActivityMessageNotification{
+	type user{name}
+	activityId
+}
+... on ActivityMentionNotification{type}
 ... on ActivityReplyNotification{
-	id type user{name}
+	type user{name}
 	activity{
-... on TextActivity{
-	id
-	type
-}
-... on ListActivity{
-	id
-	type
-	progress
-}
+... on TextActivity{id type}
+... on ListActivity{id type progress}
+... on MessageActivity{id type}
 	}
 }
 ... on ActivityReplySubscribedNotification{
-	id type user{name}
+	type user{name}
 	activity{
 ... on TextActivity{
 	id
@@ -1900,7 +1913,7 @@ query{
 	}
 }
 ... on ActivityLikeNotification{
-	id type user{name}
+	type user{name}
 	activity{
 ... on TextActivity{
 	id
@@ -1914,25 +1927,23 @@ query{
 	}
 }
 ... on ActivityReplyLikeNotification{
-	id type user{name}
+	type user{name}
 	activity{
 ... on TextActivity{
-	id
 	type
 }
 ... on ListActivity{
-	id
 	type
 	progress
 }
 	}
 }
-... on ThreadCommentMentionNotification{id type}
-... on ThreadCommentReplyNotification{id type}
-... on ThreadCommentSubscribedNotification{id type}
-... on ThreadCommentLikeNotification{id type}
-... on ThreadLikeNotification{id type}
-... on RelatedMediaAdditionNotification{id type}
+... on ThreadCommentMentionNotification{type}
+... on ThreadCommentReplyNotification{type}
+... on ThreadCommentSubscribedNotification{type}
+... on ThreadCommentLikeNotification{type}
+... on ThreadLikeNotification{type}
+... on RelatedMediaAdditionNotification{type}
 		}
 	}
 }`,
@@ -2026,8 +2037,15 @@ query{
 					}
 				}
 			}
+			else if(notification.type === "ACTIVITY_MESSAGE"){
+				create("span",false," sent you a ",noti);
+				let activityLink = create("span","ilink","message",noti);
+				activityLink.onclick = function(){
+					viewSingleActivity(notification.activityId)
+				}
+			}
 			else if(notification.type === "ACTIVITY_REPLY"){
-				create("span",false," replied to your ",noti);
+				let action = create("span",false," replied to your ",noti);
 				let activityLink = create("span","ilink","activity",noti);
 				if(notification.activity.type === "TEXT"){
 					activityLink.innerText = "status";
@@ -2035,6 +2053,10 @@ query{
 					if(cacheItem){
 						create("span",false," [" + extractKeywords(cacheItem.activity.text)[0] + "]",noti)
 					}
+				}
+				else if(notification.activity.type === "MESSAGE"){
+					action.innerText = " replied to a ";
+					activityLink.innerText = "message";
 				}
 				activityLink.onclick = function(){
 					viewSingleActivity(notification.activity.id)
