@@ -335,7 +335,7 @@ function extractKeywords(text,number){
 		- words.filter(v => v === b).length)
 		|| (a === a.toUpperCase()) - (b === b.toUpperCase())
 	).filter(
-		word => !["in","the","it","It's","is","are","I","I'm","you","with","for","on"].includes(word) && word.length < 30
+		word => !["in","the","it","It's","is","are","I","I'm","you","with","for","on","of"].includes(word) && word.length < 30
 	)
 	if(!sorted.length){
 		if(text.match(/img/i)){
@@ -1870,58 +1870,58 @@ let viewSingleActivity = function(id){
 		content.appendChild(loader())
 	}
 	authAPIcall(
-		`query($id: Int){
-			Activity(id: $id){
-				... on TextActivity{
-					id
-					type
-					createdAt
-					text
-					user{name}
-					likes{name}
-					replies{
-						id
-						createdAt
-						text
-						user{name}
-						likes{name}
-					}
-				}
-				... on MessageActivity{
-					id
-					type
-					createdAt
-					text: message
-					user: messenger{name}
-					recipient{name}
-					likes{name}
-					replies{
-						id
-						createdAt
-						text
-						user{name}
-						likes{name}
-					}
-				}
-				... on ListActivity{
-					id
-					type
-					createdAt
-					user{name}
-					likes{name}
-					media{title{romaji}}
-					progress
-					status
-					replies{
-						id
-						createdAt
-						text
-						user{name}
-						likes{name}
-					}
-				}
+`query($id: Int){
+	Activity(id: $id){
+		... on TextActivity{
+			id
+			type
+			createdAt
+			text
+			user{name}
+			likes{name}
+			replies{
+				id
+				createdAt
+				text
+				user{name}
+				likes{name}
 			}
-		}`,
+		}
+		... on MessageActivity{
+			id
+			type
+			createdAt
+			text: message
+			user: messenger{name}
+			recipient{name}
+			likes{name}
+			replies{
+				id
+				createdAt
+				text
+				user{name}
+				likes{name}
+			}
+		}
+		... on ListActivity{
+			id
+			type
+			createdAt
+			user{name}
+			likes{name}
+			media{title{romaji}}
+			progress
+			status
+			replies{
+				id
+				createdAt
+				text
+				user{name}
+				likes{name}
+			}
+		}
+	}
+}`,
 		{id: id},
 		function(data){
 			activity_map.set(id,new ActivityNode(data.data.Activity));
@@ -2054,7 +2054,7 @@ query{
 					renderRequest = true;
 					callNots()
 				}
-				data.data.Viewer.unreadNotificationCount = notsData.data.Viewer.unreadNotificationCount
+				notsData.data.Viewer.unreadNotificationCount = data.data.Viewer.unreadNotificationCount
 			}
 		)
 	},settings.pollingInterval*1000)

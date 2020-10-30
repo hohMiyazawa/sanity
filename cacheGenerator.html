@@ -1,0 +1,79 @@
+<!<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="utf-8">
+		<title>cache generator for sAnity</title>
+		<link rel="stylesheet" href="sanity.css"/>
+		<link rel="icon" href="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' version='1.1' width='16' height='16' viewBox='0 0 16 16'><path d='M3 1L3 15M6 15L6 1L13 15L13 1' stroke='black' fill='none'/></svg>" sizes="any" type="image/svg+xml">
+	</head>
+	<body>
+		<p>This is a tool to generate various static caches for sAnity. This helps reducing latency on startup and saves API calls, but may get outdated. Static cache options can be found in the settings.</p>
+		<p>You should not be required to run this tool yourself, as updated caches should be distributed. But hey, it doesn't hurt having all code available.</p>
+		<div id="app">
+			<button onclick="tagDB()">Generate static tag database</button>
+		</div>
+		<script>
+function saveAs(data,fileName,pureText){
+	//todo: support for browsers without blobs?
+	let link = document.createElement("a");
+	document.body.appendChild(link);
+	let json = pureText ? data : JSON.stringify(data);
+	let blob = new Blob([json],{type: "octet/stream"});
+	let url = window.URL.createObjectURL(blob);
+	link.href = url;
+	link.download = fileName || "File from Anilist.co";
+	link.click();
+	window.URL.revokeObjectURL(url);
+	document.body.removeChild(link);
+}
+
+const url = "https://graphql.anilist.co";//Current Anilist API location
+let handleResponse = function(response){
+	console.log(response.headers.get("x-ratelimit-limit"));
+	console.log(response.headers.get("x-ratelimit-remaining"));
+	return response.json().then(function(json){
+		return (response.ok ? json : Promise.reject(json))
+	})
+}
+
+function generalAPIcall(query,variables,callback,cache,fatalError){
+	console.log("q",query);
+	let handleData = function(data){
+		callback(data,variables)
+	};
+	let options = {
+		method: "POST",
+		headers: {
+			"Content-Type": "application/json",
+			"Accept": "application/json"
+		},
+		body: JSON.stringify({
+			"query": query,
+			"variables": variables
+		})
+	};
+	let handleError = function(error){
+		console.error(error,variables);
+		handleData(null);
+		if(fatalError){
+			throw "fatal error"
+		}
+	};
+	fetch(url,options).then(handleResponse).then(handleData).catch(handleError)
+}
+
+function tagDB(){
+	generalAPIcall("query{MediaTagCollection{id name description}}",{},data => {
+		let tagArray = [];
+		data.data.MediaTagCollection.forEach(tag => {
+			tagArray.push([tag.id,{name: tag.name,description: tag.description}])
+		});
+		let dat = 
+`let tagDB_updated = ${new Date().valueOf()};
+let tagDB = new Map(${JSON.stringify(tagArray)});`;
+		saveAs(dat,"static_tagDB.js",true)
+	})
+}
+		</script>
+	</body>
+</html>
