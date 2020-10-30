@@ -1962,9 +1962,14 @@ function viewSingleMedia(id,type){
 		});
 		subNav.children[selectedIndex].classList.add("active");
 		pans[selectedIndex].deploy();
-		if(settings.mediaPageBanner && cacheObject.bannerImage){
+		if(settings.mediaPageBanner && cacheObject.bannerImage || bannerDB.has(id)){
 			let banner = create("div","banner",false,content);
-			banner.style.backgroundImage = "url(\"" + cacheObject.bannerImage + "\")";
+			if(bannerDB.has(id)){
+				banner.style.backgroundImage = "url(\"" + bannerDB.get(id) + "\")"
+			}
+			else{
+				banner.style.backgroundImage = "url(\"" + cacheObject.bannerImage + "\")"
+			}
 			header.style.marginTop = "160px";
 			header.style.marginLeft = "7px";
 			header.style.color = "rgb(var(--max-contrast))";
