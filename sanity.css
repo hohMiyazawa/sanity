@@ -131,6 +131,7 @@ body.theme-lum{
 	height: calc(100vh - 100px);
 	scrollbar-width: thin;
 	width: 60%;
+	position: relative;
 }
 .noselect{
 	user-select: none;
@@ -534,6 +535,9 @@ video{
 	justify-content: space-between;
 	margin-right: 5%;
 }
+.media-content{
+	margin-right: 5%;
+}
 .media-nav span{
 	width: 15%;
 	padding: 5px;
@@ -542,4 +546,24 @@ video{
 }
 .media-nav span.active{
 	background: rgb(var(--color-foreground));
+}
+.description{
+	background: rgb(var(--color-foreground));
+	padding: 5px;
+	border-radius: 5px;
+}
+.banner{
+	z-index: -10;
+	position: absolute;
+	top: 0px;
+	left: 0px;
+	width: 95%;
+	top: 0px;
+	height: 200px;
+	background-position: 50% 35%;
+	background-repeat: no-repeat;
+	background-size: cover;
+}
+.page-title{
+	display: inline-block;
 }

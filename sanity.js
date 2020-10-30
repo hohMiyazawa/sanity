@@ -534,6 +534,8 @@ let defaultSettings = {
 	openReplies: false,
 	pollingInterval: 120,
 	confirmDeleteActivity: true,
+	mediaPageCover: false,
+	mediaPageCover: false,
 	cacheDelays: {
 		replyHover: 10*60*1000,
 		replyClick: 1*60*1000,
@@ -1843,13 +1845,23 @@ fragment mediaListEntry on MediaList{
 				saveSettings()
 			}
 			create("span","label","% Video max width",content);
+
 			create("hr","divider",false,content);
+
 			create("h3",false,"Feed settings",content);
 			createCheckboxSetting("renderCards","Render media cards");
 			createCheckboxSetting("oldstyle","Oldstyle feed layout");
 			createCheckboxSetting("openReplies","Open all replies by default");
 			createCheckboxSetting("confirmDeleteActivity","Ask for confirmation when deleting activity");
+
 			create("hr","divider",false,content);
+
+			create("h3",false,"Media page settings",content);
+			createCheckboxSetting("mediaPageCover","Include cover image");
+			createCheckboxSetting("mediaPageBanner","Include banner");
+
+			create("hr","divider",false,content);
+
 			let exportButton = create("button","button","Export settings",content);
 			let importButton = create("button","button","Import settings",content);
 			exportButton.onclick = function(){
@@ -1897,47 +1909,96 @@ function viewSingleMedia(id,type){
 			let loader = create("div",false,"loading media...",content);
 			return
 		}
-		let header = create("h3","title",cacheObject.title.romaji,content);
+		let header = create("h3",["title","page-title"],cacheObject.title.romaji,content);
 		let subNav = create("div","media-nav",false,content);
 		let swapContent = create("div","media-content",false,content);
 		let pans = [
-			{name: "Overview"},
-			{name: "Staff"},
-			{name: "Characters"},
-			{name: "Reviews"},
-			{name: "Recomendations"},
-			{name: "Social"}
+			{name: "Overview",
+				deploy: function(){
+					removeChildren(swapContent);
+					let desc = create("p","description",false,swapContent);
+					desc.innerHTML = makeHtml(cacheObject.description || "")
+				}
+			},
+			{name: "Staff",
+				deploy: function(){
+					removeChildren(swapContent);
+					create("p",false,"not implemented",swapContent)
+				}
+			},
+			{name: "Characters",
+				deploy: function(){
+					removeChildren(swapContent);
+					create("p",false,"not implemented",swapContent)
+				}
+			},
+			{name: "Reviews",
+				deploy: function(){
+					removeChildren(swapContent);
+					create("p",false,"not implemented",swapContent)
+				}
+			},
+			{name: "Recomendations",
+				deploy: function(){
+					removeChildren(swapContent);
+					create("p",false,"not implemented",swapContent)
+				}
+			},
+			{name: "Social",
+				deploy: function(){
+					removeChildren(swapContent);
+					create("p",false,"not implemented",swapContent)
+				}
+			}
 		];
 		pans.forEach((pan,index) => {
 			let navItem = create("span",false,pan.name,subNav);
 			navItem.onclick = function(){
 				subNav.children[selectedIndex].classList.remove("active");
 				navItem.classList.add("active");
-				selectedIndex = index
+				selectedIndex = index;
+				pan.deploy()
 			}
 		});
 		subNav.children[selectedIndex].classList.add("active");
+		pans[selectedIndex].deploy();
+		if(settings.mediaPageBanner && cacheObject.bannerImage){
+			let banner = create("div","banner",false,content);
+			banner.style.backgroundImage = "url(\"" + cacheObject.bannerImage + "\")";
+			header.style.marginTop = "160px";
+			header.style.marginLeft = "7px";
+			header.style.color = "rgb(var(--max-contrast))";
+			header.style.background = "rgb(var(--color-foreground))";
+			header.style.padding = "5px";
+			header.style.borderRadius = "5px";
+		}
 	}
 	render();
 	if(
 		!Object.keys(cacheObject).length
 		|| !cacheObject.title
 		|| !cacheObject.description
+		|| (settings.mediaPageBanner && !cacheObject.hasOwnProperty("bannerImage"))
 	){
 		generalAPIcall(
 `query($id: Int){
 	Media(id: $id){
 		title{romaji native english}
 		description
+		bannerImage
 	}
 }`,
 			{id: id},
 			function(data){
 				Object.keys(data.data.Media).forEach(key => cacheObject[key] = data.data.Media[key]);
+				mediaCache.set(id,cacheObject);
 				render();
-				mediaCache.set(id,cacheObject)
+				listEditor(id,type,cacheObject.title.romaji);
 			}
 		)
+	}
+	else{
+		listEditor(id,type,cacheObject.title.romaji)
 	}
 }
 

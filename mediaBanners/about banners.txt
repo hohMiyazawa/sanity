@@ -1,0 +1,7 @@
+You can store banners for media entries locally in this directory.
+Purpose:
+	a) Speed up load times
+	b) Customisation
+
+Name the banners with their media ID ("1.jpg" for Cowboy Bebop)
+List them in the static_bannerDB.js file. (or run generate_banner_cache.sh)
