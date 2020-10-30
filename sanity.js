@@ -335,7 +335,7 @@ function extractKeywords(text,number){
 		- words.filter(v => v === b).length)
 		|| (a === a.toUpperCase()) - (b === b.toUpperCase())
 	).filter(
-		word => !["in","the","it","It's","is","are","I","I'm","you","with","for","on","of"].includes(word) && word.length < 30
+		word => !["in","the","it","It's","is","are","I","I'm","you","with","for","on","of","this","as"].includes(word) && word.length < 30
 	)
 	if(!sorted.length){
 		if(text.match(/img/i)){
@@ -418,6 +418,11 @@ const insert_activity_node = function(node,cache_location,cache_name){
 
 const update_cache = function(activities,type,optionalName){
 	activities.forEach(activity => {
+		if(activity.type === "ANIME_LIST" || activity.type === "MANGA_LIST"){
+			let cacheObject = mediaCache.get(activity.media.id) || {};
+			Object.keys(activity.media).forEach(key => cacheObject[key] = activity.media[key]);
+			mediaCache.set(activity.media.id,cacheObject)
+		}
 		if(activity_map.has(activity.id)){
 			let node = activity_map.get(activity.id);
 			node.activity = activity;
@@ -521,6 +526,7 @@ let defaultSettings = {
 	displayImages: true,
 	displayGifs: true,
 	displayVideos: true,
+	displayOwn: true,
 	autoplayVideos: false,
 	muteVideos: true,
 	videoMaxwidth: 80,
@@ -920,10 +926,16 @@ let formatActivity = function(activity,options){
 			media = create("span","ilink",activity.media.title.romaji,header)
 		}
 		if(activity.type === "ANIME_LIST"){
-			media.classList.add("anime")
+			media.classList.add("anime");
+			media.onclick = function(){
+				viewSingleMedia(activity.media.id,"ANIME")
+			}
 		}
 		else{
-			media.classList.add("manga")
+			media.classList.add("manga");
+			media.onclick = function(){
+				viewSingleMedia(activity.media.id,"MANGA")
+			}
 		}
 		let editorLink = create("span",["ilink","editor-link"],"→",header);
 		editorLink.title = "open list editor";
@@ -1020,7 +1032,12 @@ let formatActivity = function(activity,options){
 					createText.value = "";
 					preview.innerHTML = "";
 					replyEditId = null;
-					publishButton.innerText = "Publish"
+					publishButton.innerText = "Publish";
+					if(activity.replies.length === 0){
+						postWrap.classList.toggle("replies-open");
+						replyWrap.parentNode.removeChild(replyWrap);
+						replyWrap = null
+					}
 				}
 				publishButton.onclick = function(){
 					if(createText.value){
@@ -1396,7 +1413,7 @@ query{
 	{
 		name: "Anime",
 		action: function(){
-			updateUrl("?anime");
+			updateUrl("?animelist");
 			document.title = "sAnity - anime list";
 			removeChildren(content);
 			if(settings.accessToken){
@@ -1514,7 +1531,7 @@ fragment mediaListEntry on MediaList{
 		nextAiringEpisode{episode}
 		format
 		title{romaji native english}
-		tags{name}
+		tags{id}
 		genres
 		meanScore
 		studios{nodes{isAnimationStudio id name}}
@@ -1536,7 +1553,9 @@ fragment mediaListEntry on MediaList{
 									entries: []
 								};
 								list.entries.forEach(entry => {
-									mediaCache.set(entry.mediaId,entry.media);
+									let cacheObject = mediaCache.get(entry.mediaId) || {};
+									Object.keys(entry.media).forEach(key => cacheObject[key] = entry.media[key]);
+									mediaCache.set(entry.mediaId,cacheObject);
 									entryCache.set(entry.mediaId,{
 										status: entry.status,
 										progress: entry.progress,
@@ -1565,7 +1584,7 @@ fragment mediaListEntry on MediaList{
 	{
 		name: "Manga",
 		action: function(){
-			updateUrl("?manga");
+			updateUrl("?mangalist");
 			document.title = "sAnity - manga list";
 			removeChildren(content);
 			if(settings.accessToken){
@@ -1688,7 +1707,7 @@ fragment mediaListEntry on MediaList{
 		volumes
 		format
 		title{romaji native english}
-		tags{name}
+		tags{id}
 		genres
 		meanScore
 	}
@@ -1709,7 +1728,9 @@ fragment mediaListEntry on MediaList{
 									entries: []
 								};
 								list.entries.forEach(entry => {
-									mediaCache.set(entry.mediaId,entry.media);
+									let cacheObject = mediaCache.get(entry.mediaId) || {};
+									Object.keys(entry.media).forEach(key => cacheObject[key] = entry.media[key]);
+									mediaCache.set(entry.mediaId,cacheObject);
 									entryCache.set(entry.mediaId,{
 										status: entry.status,
 										progress: entry.progress,
@@ -1809,6 +1830,7 @@ fragment mediaListEntry on MediaList{
 			createCheckboxSetting("displayImages","Embed feed images");
 			createCheckboxSetting("displayGifs","Embed feed gifs");
 			createCheckboxSetting("displayVideos","Embed feed videos");
+			createCheckboxSetting("displayOwn","Always embed media in my own posts, regardless of above settings");
 			createCheckboxSetting("autoplayVideos","Autoplay videos");
 			createCheckboxSetting("muteVideos","Mute videos");
 			let videoMaxwidth = create("input",false,false,content,"width: 50px");
@@ -1860,7 +1882,66 @@ function viewSingleProfile(name){//hot single weebs near you
 	create("div",false,"Profile of " + name,content)
 }
 
-let viewSingleActivity = function(id){
+function viewSingleMedia(id,type){
+	if(type === "ANIME"){
+		updateUrl("?anime=" + id);
+	}
+	else{
+		updateUrl("?manga=" + id);
+	}
+	let cacheObject = mediaCache.get(id) || {};
+	let selectedIndex = 0;
+	let render = function(){
+		removeChildren(content);
+		if(!Object.keys(cacheObject).length){
+			let loader = create("div",false,"loading media...",content);
+			return
+		}
+		let header = create("h3","title",cacheObject.title.romaji,content);
+		let subNav = create("div","media-nav",false,content);
+		let swapContent = create("div","media-content",false,content);
+		let pans = [
+			{name: "Overview"},
+			{name: "Staff"},
+			{name: "Characters"},
+			{name: "Reviews"},
+			{name: "Recomendations"},
+			{name: "Social"}
+		];
+		pans.forEach((pan,index) => {
+			let navItem = create("span",false,pan.name,subNav);
+			navItem.onclick = function(){
+				subNav.children[selectedIndex].classList.remove("active");
+				navItem.classList.add("active");
+				selectedIndex = index
+			}
+		});
+		subNav.children[selectedIndex].classList.add("active");
+	}
+	render();
+	if(
+		!Object.keys(cacheObject).length
+		|| !cacheObject.title
+		|| !cacheObject.description
+	){
+		generalAPIcall(
+`query($id: Int){
+	Media(id: $id){
+		title{romaji native english}
+		description
+	}
+}`,
+			{id: id},
+			function(data){
+				Object.keys(data.data.Media).forEach(key => cacheObject[key] = data.data.Media[key]);
+				render();
+				mediaCache.set(id,cacheObject)
+			}
+		)
+	}
+}
+
+function viewSingleActivity(id){
 	updateUrl("?activity=" + id);
 	removeChildren(content);
 	if(activity_map.has(id)){

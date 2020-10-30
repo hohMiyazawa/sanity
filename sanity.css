@@ -529,3 +529,17 @@ video{
 .version{
 	margin-left: 30%;
 }
+.media-nav{
+ 	display: flex;
+	justify-content: space-between;
+	margin-right: 5%;
+}
+.media-nav span{
+	width: 15%;
+	padding: 5px;
+	text-align: center;
+	cursor: pointer;
+}
+.media-nav span.active{
+	background: rgb(var(--color-foreground));
+}
