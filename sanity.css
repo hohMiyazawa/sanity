@@ -291,6 +291,9 @@ body.theme-lum{
 .activity{
 	margin: 10px;
 	position: relative;
+	max-height: 1000px;
+	overflow-y: auto;
+	scrollbar-width: thin;
 }
 .activity:not(.standalone).replies-open{
 	border-right: dashed;

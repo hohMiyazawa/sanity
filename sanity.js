@@ -946,7 +946,7 @@ let formatActivity = function(activity,options){
 				}
 				publishButton.onclick = function(){
 					if(createText.value){
-						if(replyEditId){
+						if(!replyEditId){
 							publishButton.classList.add("disabled");
 							authAPIcall(
 								`mutation($text: String,$activityId: Int){SaveActivityReply(text: $text,activityId: $activityId){id}}`,
@@ -1048,6 +1048,7 @@ let activeTab;
 									publishButton.classList.remove("disabled");
 									createText.value = "";
 									preview.innerHTML = "";
+									createText.rows = 1;
 									updateMode(currentFeed)
 								}
 							)
