@@ -258,6 +258,18 @@ makeHtml = function(markdown){
 		}
 		return component
 	});
+	centerSplit = centerSplit.map(component => {
+		let images = component.match(/<img src="(.+?)">/gi);
+		if(images){
+			images.forEach(image => {
+				let imageParts = image.match(/<img src="(.+?)">/i);
+				if(!settings.displayImages){
+					component = component.replace(image,`[IMG]<a class="supressed-image" href="${imageParts[1]}">${imageParts[1]}</a>`)
+				}
+			})
+		}
+		return component
+	})
 	let webmRegex = /webm(\d+%?)?\(.+?\)/gi;
 	centerSplit = centerSplit.map(component => {
 		let videos = component.match(webmRegex);
@@ -911,38 +923,51 @@ let formatActivity = function(activity,options){
 		convertInternalLinks(markdown)
 	}
 	else if(activity.type === "MANGA_LIST" || activity.type === "ANIME_LIST"){
-		let media;
-		if(activity.status === "dropped"){
-			create("span","status"," dropped ",header);
-			media = create("span","ilink",activity.media.title.romaji,header)
-		}
-		else if(activity.status === "completed"){
-			create("span","status"," " + activity.status + " ",header);
-			create("span","status",activity.progress,header);
-			media = create("span","ilink",activity.media.title.romaji,header)
-		}
-		else{
-			create("span","status"," " + activity.status + " ",header);
-			create("span","status",activity.progress,header);
-			create("span","status"," of ",header);
-			media = create("span","ilink",activity.media.title.romaji,header)
-		}
-		if(activity.type === "ANIME_LIST"){
-			media.classList.add("anime");
-			media.onclick = function(){
-				viewSingleMedia(activity.media.id,"ANIME")
+		if(activity.media){
+			let media;
+			if(activity.status === "dropped"){
+				create("span","status"," dropped ",header);
+				media = create("span","ilink",activity.media.title.romaji,header)
+			}
+			else if(activity.status === "completed"){
+				create("span","status"," completed ",header);
+				media = create("span","ilink",activity.media.title.romaji,header)
+			}
+			else{
+				create("span","status"," " + activity.status + " ",header);
+				create("span","status",activity.progress,header);
+				create("span","status"," of ",header);
+				media = create("span","ilink",activity.media.title.romaji,header)
+			}
+			if(activity.type === "ANIME_LIST"){
+				media.classList.add("anime");
+				media.onclick = function(){
+					viewSingleMedia(activity.media.id,"ANIME")
+				}
+			}
+			else{
+				media.classList.add("manga");
+				media.onclick = function(){
+					viewSingleMedia(activity.media.id,"MANGA")
+				}
+			}
+			let editorLink = create("span",["ilink","editor-link"],"→",header);
+			editorLink.title = "open list editor";
+			editorLink.onclick = function(){
+				listEditor(activity.media.id,activity.type,activity.media.title.romaji)
 			}
 		}
 		else{
-			media.classList.add("manga");
-			media.onclick = function(){
-				viewSingleMedia(activity.media.id,"MANGA")
+			if(activity.status === "dropped"){
+				create("span","status"," dropped ",header)
 			}
-		}
-		let editorLink = create("span",["ilink","editor-link"],"→",header);
-		editorLink.title = "open list editor";
-		editorLink.onclick = function(){
-			listEditor(activity.media.id,activity.type,activity.media.title.romaji)
+			else if(activity.status === "completed"){
+				create("span","status"," completed ",header)
+			}
+			else{
+				create("span","status"," " + activity.status + " ",header);
+				create("span","status",activity.progress,header)
+			}
 		}
 	}
 	let actions = create("div","actions",false,item);
@@ -1947,7 +1972,42 @@ function viewSingleMedia(id,type){
 			{name: "Social",
 				deploy: function(){
 					removeChildren(swapContent);
-					create("p",false,"not implemented",swapContent)
+					create("p",false,"Loading ...",swapContent);
+					authAPIcall(
+`query($id: Int){
+	Page(perPage: 25){
+		activities(sort: ID_DESC,mediaId: $id){
+			... on ListActivity{
+				id
+				type
+				createdAt
+				user{name}
+				likes{name}
+				progress
+				status
+				replies{
+					id
+					createdAt
+					text
+					user{name}
+					likes{name}
+				}
+			}
+		}
+	}
+}`,
+						{id: id},
+						function(data){
+							removeChildren(swapContent);
+							let feed = create("div","feed",false,swapContent);
+							if(settings.oldstyle){
+								feed.classList.add("oldstyle")
+							}
+							data.data.Page.activities.forEach(act => {
+								feed.appendChild(formatActivity(act,{}))
+							})
+						}
+					)
 				}
 			}
 		];
