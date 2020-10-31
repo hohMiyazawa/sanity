@@ -575,3 +575,13 @@ video{
 	width: 50%;
 	padding: 10px;
 }
+.notification{
+	position: relative;
+}
+.notification .time{
+	position: absolute;
+	top: 0px;
+	right: 0px;
+	font-size: x-small;
+	font-weight: lighter;
+}

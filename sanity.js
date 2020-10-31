@@ -349,7 +349,7 @@ function extractKeywords(text,number){
 		- words.filter(v => v === b).length)
 		|| (a === a.toUpperCase()) - (b === b.toUpperCase())
 	).filter(
-		word => !["in","the","it","It's","is","are","I","I'm","you","with","for","on","of","this","as","to"].includes(word) && word.length < 30
+		word => !["in","the","it","it's","is","are","i","i'm","you","with","for","on","of","this","as","to","and","some"].includes(word.toLowerCase()) && word.length < 30
 	)
 	if(!sorted.length){
 		if(text.match(/img/i)){
@@ -936,7 +936,7 @@ let formatActivity = function(activity,options){
 		user.onclick = function(){
 			viewSingleProfile(activity.user.name)
 		}
-	let time = create("time",false,relativeTime(activity.createdAt*1000),item);
+	let time = create("time","time",relativeTime(activity.createdAt*1000),item);
 	time.setAttribute("datetime",(new Date(activity.createdAt*1000)).toISOString());
 	time.title = (new Date(activity.createdAt*1000)).toLocaleString();
 	if(activity.type === "TEXT" || activity.type === "MESSAGE"){
@@ -1030,7 +1030,7 @@ let formatActivity = function(activity,options){
 						}
 					}
 				let header = create("div","header",false,replyDiv);
-				let time = create("time",false,relativeTime(reply.createdAt*1000),replyDiv);
+				let time = create("time","time",relativeTime(reply.createdAt*1000),replyDiv);
 				time.setAttribute("datetime",(new Date(reply.createdAt*1000)).toISOString());
 				time.title = (new Date(activity.createdAt*1000)).toLocaleString();
 				let user = create("span","ilink",reply.user.name,header);
@@ -2285,15 +2285,15 @@ query{
 	}
 	Page(perPage: 25){
 		notifications{
-... on AiringNotification{type episode media{id title{native romaji english}}}
-... on FollowingNotification{type user{name}}
+... on AiringNotification{type createdAt episode media{id title{native romaji english}}}
+... on FollowingNotification{type createdAt user{name}}
 ... on ActivityMessageNotification{
-	type user{name}
+	type createdAt user{name}
 	activityId
 }
-... on ActivityMentionNotification{type user{name}}
+... on ActivityMentionNotification{type createdAt user{name}}
 ... on ActivityReplyNotification{
-	type user{name}
+	type createdAt user{name}
 	activity{
 ... on TextActivity{id type}
 ... on ListActivity{id type progress}
@@ -2301,7 +2301,7 @@ query{
 	}
 }
 ... on ActivityReplySubscribedNotification{
-	type user{name}
+	type createdAt user{name}
 	activity{
 ... on TextActivity{
 	id
@@ -2315,7 +2315,7 @@ query{
 	}
 }
 ... on ActivityLikeNotification{
-	type user{name}
+	type createdAt user{name}
 	activity{
 ... on TextActivity{
 	id
@@ -2329,7 +2329,7 @@ query{
 	}
 }
 ... on ActivityReplyLikeNotification{
-	type user{name}
+	type createdAt user{name}
 	activity{
 ... on TextActivity{
 	id
@@ -2342,13 +2342,13 @@ query{
 }
 	}
 }
-... on ThreadCommentMentionNotification{type}
-... on ThreadCommentReplyNotification{type}
-... on ThreadCommentSubscribedNotification{type}
-... on ThreadCommentLikeNotification{type}
-... on ThreadLikeNotification{type}
+... on ThreadCommentMentionNotification{type createdAt}
+... on ThreadCommentReplyNotification{type createdAt}
+... on ThreadCommentSubscribedNotification{type createdAt}
+... on ThreadCommentLikeNotification{type createdAt}
+... on ThreadLikeNotification{type createdAt}
 ... on RelatedMediaAdditionNotification{
-	type
+	type createdAt
 	media{id type title{romaji native english}}
 }
 		}
@@ -2401,6 +2401,9 @@ query{
 		removeChildren(sidebarApp);
 		(notsData ? notsData.data.Page.notifications : []).forEach((notification,index) => {
 			let noti = create("div","notification",false,sidebarApp);
+			let time = create("time","time",relativeTime(notification.createdAt*1000),noti);
+			time.setAttribute("datetime",(new Date(notification.createdAt*1000)).toISOString());
+			time.title = (new Date(notification.createdAt*1000)).toLocaleString();
 			if(notification.user){
 				let userLink = create("span","ilink",notification.user.name,noti);
 				userLink.onclick = function(){
