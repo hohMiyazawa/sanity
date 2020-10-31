@@ -287,7 +287,7 @@ body.theme-lum{
 	padding-left: 25px;
 }
 .feed{
-	width: 90%;
+	width: 95%;
 }
 .ilink.manga{
 	color: rgb(var(--color-green));
@@ -362,10 +362,12 @@ video{
 	min-width: 120px;
 	text-align: left;
 }
+.notifications .label{
+	margin: 2px;
+}
 #nav .notifications .count{
 	display: inline-block;
 	background: rgb(var(--color-peach));
-	margin: 2px;
 	border-radius: 2px;
 	min-width: 20px;
 	text-align: center;
@@ -535,7 +537,8 @@ video{
 	justify-content: space-between;
 	margin-right: 5%;
 }
-.media-content{
+.media-content,
+.user-content{
 	margin-right: 5%;
 }
 .media-nav span{
@@ -566,4 +569,9 @@ video{
 }
 .page-title{
 	display: inline-block;
+}
+.user-content .about{
+	background: rgb(var(--color-foreground));
+	width: 50%;
+	padding: 10px;
 }

@@ -182,6 +182,7 @@ function generalAPIcall(query,variables,callback,cache,fatalError){
 function authAPIcall(query,variables,callback,cache,fatalError){
 	if(!settings.accessToken){
 		console.log("authorized query requested, but no access token found. converting to regular query");
+		console.log(query);
 		generalAPIcall(query,variables,callback,cache,fatalError);
 		return
 	}
@@ -382,6 +383,7 @@ const followingUserCache = new Set();
 
 const mediaCache = new Map();
 const entryCache = new Map();
+const userCache = new Map();
 
 const activity_map = new Map();
 
@@ -555,6 +557,9 @@ let defaultSettings = {
 		replyReply: 20*1000,
 		likeHover: 2*60*1000
 		//likeClick: always
+	},
+	me: {
+		name: "sanity-generic-chan"
 	}
 };
 
@@ -828,13 +833,15 @@ if(/#access_token/.test(document.URL)){
 	})
 }
 if(!settings.me){
-	authAPIcall(basicInfo,{},function(data){
-		if(!data){
-			return
-		}
-		settings.me = data.data.Viewer;
-		saveSettings()
-	})
+	if(settings.accessToken){
+		authAPIcall(basicInfo,{},function(data){
+			if(!data){
+				return
+			}
+			settings.me = data.data.Viewer;
+			saveSettings()
+		})
+	}
 }
 
 let resizer = document.getElementById("resizer");
@@ -1409,31 +1416,32 @@ query{
 	Page(perPage: 25){
 		activities(sort: ID_DESC,type: TEXT){
 			... on TextActivity{
+				id type
 				text
+				createdAt
 				user{name}
 				likes{name}
+				replies{
+					id
+					createdAt
+					text
+					user{name}
+					likes{name}
+				}
 			}
 		}
 	}
 }`,
 					{},
 					function(data){
+						let postContent = create("div","feed",false,content);
 						if(document.querySelector("#nav .active").innerText === "Social"){
-							removeChildren(content);
 							if(!data){
 								create("div","error","Failed to connect to Anilist",content);
 								return
 							}
 							data.data.Page.activities.forEach(activity => {
-								let item = create("div","post",false,content);
-								let header = create("div","header",false,item);
-								let user = create("span","ilink",activity.user.name,header);
-								let markdown = create("div","markdown",false,item);
-								markdown.innerHTML = makeHtml(activity.text);
-								convertInternalLinks(markdown)
-								let actions = create("div","actions",false,item);
-								let likes = create("span",["action","likes"],(activity.likes.length || "") + "♥️",actions);
-								likes.title = activity.likes.map(user => user.name).join("\n")
+								postContent.appendChild(formatActivity(activity,{openReplies: false, autoOpen: settings.openReplies,noAuth: true}))
 							})
 						}
 					}
@@ -1931,8 +1939,104 @@ fragment mediaListEntry on MediaList{
 function viewSingleProfile(name){//hot single weebs near you
 	removeChildren(content);
 	updateUrl("?profile=" + name);
-	removeChildren(content);
-	create("div",false,"Profile of " + name,content)
+	let cacheObject = userCache.get(name) || {};
+	let selectedIndex = 0;
+	let render = function(){
+		removeChildren(content);
+		create("h3",false,"Profile of " + name,content);
+		let subNav = create("div","media-nav",false,content);
+		let swapContent = create("div","user-content",false,content);
+		let pans = [
+			{name: "Overview",
+				deploy: function(){
+					removeChildren(swapContent);
+					let desc = create("div","about",false,swapContent);
+					desc.innerHTML = makeHtml(cacheObject.about || "")
+				}
+			},
+			{name: "Anime",
+				deploy: function(){
+					removeChildren(swapContent);
+					create("p",false,"not implemented",swapContent)
+				}
+			},
+			{name: "Manga",
+				deploy: function(){
+					removeChildren(swapContent);
+					create("p",false,"not implemented",swapContent)
+				}
+			},
+			{name: "Favs",
+				deploy: function(){
+					removeChildren(swapContent);
+					create("p",false,"not implemented",swapContent)
+				}
+			},
+			{name: "Stats",
+				deploy: function(){
+					removeChildren(swapContent);
+					create("p",false,"not implemented",swapContent)
+				}
+			},
+			{name: "Social",
+				deploy: function(){
+					removeChildren(swapContent);
+					create("p",false,"not implemented",swapContent)
+				}
+			},
+			{name: "Reviews",
+				deploy: function(){
+					removeChildren(swapContent);
+					create("p",false,"not implemented",swapContent)
+				}
+			}
+		];
+		pans.forEach((pan,index) => {
+			let navItem = create("span",false,pan.name,subNav);
+			navItem.onclick = function(){
+				subNav.children[selectedIndex].classList.remove("active");
+				navItem.classList.add("active");
+				selectedIndex = index;
+				pan.deploy()
+			}
+		});
+		subNav.children[selectedIndex].classList.add("active");
+		if(!Object.keys(cacheObject).length){
+			return
+		}
+		pans[selectedIndex].deploy();
+		if(settings.userPageBanner && cacheObject.bannerImage){
+			let banner = create("div","banner",false,content);
+			banner.style.backgroundImage = "url(\"" + cacheObject.bannerImage + "\")"
+			header.style.marginTop = "160px";
+			header.style.marginLeft = "7px";
+			header.style.color = "rgb(var(--max-contrast))";
+			header.style.background = "rgb(var(--color-foreground))";
+			header.style.padding = "5px";
+			header.style.borderRadius = "5px";
+		}
+	}
+	if(
+		!Object.keys(cacheObject).length
+		|| !cacheObject.about
+		|| (settings.userPageBanner && !cacheObject.hasOwnProperty("bannerImage"))
+	){
+		generalAPIcall(
+`query($name: String){
+	User(name: $name){
+		id
+		about
+	}
+}`,
+			{name: name},
+			function(data){
+				Object.keys(data.data.User).forEach(key => cacheObject[key] = data.data.User[key]);
+				userCache.set(name,cacheObject);
+				render()
+			}
+		)
+	}
+	render()
 }
 
 function viewSingleMedia(id,type){
@@ -2290,6 +2394,7 @@ query{
 					function(data){}
 				)
 				notificationCount.innerText = "";
+				notsData.data.Viewer.unreadNotificationCount = 0;
 				sidebarApp = null
 			})
 		}
