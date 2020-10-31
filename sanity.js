@@ -249,7 +249,7 @@ makeHtml = function(markdown){
 				if(settings.displayImages && (settings.displayGifs || !imageParts[2].match(/\.gifv?$/i))){
 					component = component.replace(image,`<img width="${imageParts[1] || ""}" src="${imageParts[2]}">`)
 				}
-				else if(!settings.displayGifs && imageParts[2].match(/\.gif$/i)){
+				else if(!settings.displayGifs && imageParts[2].match(/\.gifv?$/i)){
 					component = component.replace(image,`[GIF]<a data-size="${imageParts[1] || ""}" class="supressed-image" href="${imageParts[2]}">${"```" + decodeURIComponent(imageParts[2]) + "```"}</a>`)
 				}
 				else{
@@ -511,23 +511,23 @@ const retrieve_cache = function(cache_name,amount,filterFunction,optionalName){
 }
 
 const deleteActivity = function(id){
-	let act = activity_map.get(activity.id);
+	let act = activity_map.get(id);
 	if(!act){
 		return
 	}
 	Object.keys(act.cache).forEach(cache => {
 		let head = cache_heads[cache];
-		if(head.activity.id === activity.id){
+		if(head.activity.id === id){
 			cache_heads[cache] = act.cache[cache]
 		}
 		else{
-			while(head.cache[cache].activity.id !== activity.id){
+			while(head.cache[cache].activity.id !== id){
 				head = head.cache[cache]
 			}
 			head.cache[cache] = act.cache[cache]
 		}
 	})
-	activity_map.delete(activity.id)
+	activity_map.delete(id)
 }
 
 let defaultSettings = {
@@ -636,7 +636,7 @@ let listEditor = function(mediaId,type,fallbackName){
 	let editor = occupy_sidebar(fallbackName);
 	editor.classList.add("editor");
 	let saveButton = create("button","button","Add",editor);
-	let spinner = create("span","spinner","",editor);
+	let spinner = create("span","spinner","…",editor);
 
 	let statusRow = create("p","data-row",false,editor);
 	let status = create("select",["editor-input","input-select"],false,statusRow);
@@ -707,21 +707,25 @@ let listEditor = function(mediaId,type,fallbackName){
 		spinner.innerText = "…";
 		spinner.title = "saving changes…";
 		authAPIcall(
-`mutation($mediaId: Int,$progress: Int){SaveMediaListEntry(mediaId: $mediaId,progress: $progress){
-	mediaId
-	progress
-	${type === "MANGA_LIST" ? "progressVolumes" : ""}
-	status
-	notes
-	repeat
-	priority
-	startedAt{year month day}
-	completedAt{year month day}
-	scoreRaw: score(format: POINT_100)
-}}`,
+`mutation($mediaId: Int,$progress: Int,$score: Float,$status: MediaListStatus){
+	SaveMediaListEntry(mediaId: $mediaId,progress: $progress,score: $score,status: $status){
+		mediaId
+		progress
+		${type === "MANGA_LIST" ? "progressVolumes" : ""}
+		status
+		notes
+		repeat
+		priority
+		startedAt{year month day}
+		completedAt{year month day}
+		scoreRaw: score(format: POINT_100)
+	}
+}`,
 			{
 				mediaId: mediaId,
-				progress: parseInt(progress.value)
+				progress: parseInt(progress.value) || 0,
+				score: parseFloat(score.value) || 0,
+				status: status.value
 			},
 			function(data){
 				if(!data){
@@ -776,6 +780,7 @@ let listEditor = function(mediaId,type,fallbackName){
 	}
 	if(entryCache.has(mediaId)){
 		insertValues()
+		spinner.innerText = "";
 	}
 	else{
 		authAPIcall(
@@ -795,7 +800,7 @@ let listEditor = function(mediaId,type,fallbackName){
 }`,
 			{id: mediaId,name: settings.me.name},
 			function(data){
-				console.log(data);
+				spinner.innerText = "";
 				if(!data){
 					entryCache.set(mediaId,null);
 					insertValues()
