@@ -348,7 +348,7 @@ function extractKeywords(text,number){
 		- words.filter(v => v === b).length)
 		|| (a === a.toUpperCase()) - (b === b.toUpperCase())
 	).filter(
-		word => !["in","the","it","It's","is","are","I","I'm","you","with","for","on","of","this","as"].includes(word) && word.length < 30
+		word => !["in","the","it","It's","is","are","I","I'm","you","with","for","on","of","this","as","to"].includes(word) && word.length < 30
 	)
 	if(!sorted.length){
 		if(text.match(/img/i)){
@@ -2132,7 +2132,7 @@ function viewSingleActivity(id){
 			createdAt
 			user{name}
 			likes{name}
-			media{title{romaji}}
+			media{id title{romaji}}
 			progress
 			status
 			replies{
