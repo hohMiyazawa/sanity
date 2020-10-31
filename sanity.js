@@ -99,7 +99,8 @@ const icons = {
 	cross: "✕",
 	like: "♥",
 	link: "🔗",
-	edit: "✎"
+	edit: "✎",
+	check: "✓"
 }
 
 function saveAs(data,fileName,pureText){
@@ -249,10 +250,10 @@ makeHtml = function(markdown){
 					component = component.replace(image,`<img width="${imageParts[1] || ""}" src="${imageParts[2]}">`)
 				}
 				else if(!settings.displayGifs && imageParts[2].match(/\.gif$/i)){
-					component = component.replace(image,`[GIF]<a data-size="${imageParts[1] || ""}" class="supressed-image" href="${imageParts[2]}">${imageParts[2]}</a>`)
+					component = component.replace(image,`[GIF]<a data-size="${imageParts[1] || ""}" class="supressed-image" href="${imageParts[2]}">${"```" + decodeURIComponent(imageParts[2]) + "```"}</a>`)
 				}
 				else{
-					component = component.replace(image,`[IMG]<a data-size="${imageParts[1] || ""}" class="supressed-image" href="${imageParts[2]}">${imageParts[2]}</a>`)
+					component = component.replace(image,`[IMG]<a data-size="${imageParts[1] || ""}" class="supressed-image" href="${imageParts[2]}">${"```" + decodeURIComponent(imageParts[2]) + "```"}</a>`)
 				}
 			})
 		}
@@ -264,7 +265,7 @@ makeHtml = function(markdown){
 			images.forEach(image => {
 				let imageParts = image.match(/<img src="(.+?)">/i);
 				if(!settings.displayImages){
-					component = component.replace(image,`[IMG]<a class="supressed-image" href="${imageParts[1]}">${imageParts[1]}</a>`)
+					component = component.replace(image,`[IMG]<a class="supressed-image" href="${imageParts[1]}">${"```" + decodeURIComponent(imageParts[1]) + "```"}</a>`)
 				}
 			})
 		}
@@ -635,6 +636,7 @@ let listEditor = function(mediaId,type,fallbackName){
 	let editor = occupy_sidebar(fallbackName);
 	editor.classList.add("editor");
 	let saveButton = create("button","button","Add",editor);
+	let spinner = create("span","spinner","",editor);
 
 	let statusRow = create("p","data-row",false,editor);
 	let status = create("select",["editor-input","input-select"],false,statusRow);
@@ -701,6 +703,9 @@ let listEditor = function(mediaId,type,fallbackName){
 
 	create("hr","divider",false,editor);
 	saveButton.onclick = function(){
+		spinner.style.color = "rgb(var(--color-text))";
+		spinner.innerText = "…";
+		spinner.title = "saving changes…";
 		authAPIcall(
 `mutation($mediaId: Int,$progress: Int){SaveMediaListEntry(mediaId: $mediaId,progress: $progress){
 	mediaId
@@ -720,8 +725,14 @@ let listEditor = function(mediaId,type,fallbackName){
 			},
 			function(data){
 				if(!data){
+					spinner.style.color = "rgb(var(--color-peach))";
+					spinner.innerText = icons.cross;
+					spinner.title = "saving changes failed";
 					return
 				}
+				spinner.style.color = "rgb(var(--color-green))";
+				spinner.innerText = icons.check;
+				spinner.title = "changes successfully saved";
 				entryCache.set(mediaId,data.data.SaveMediaListEntry);
 			}
 		)
