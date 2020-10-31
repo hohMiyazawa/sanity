@@ -2182,7 +2182,7 @@ query{
 	Page(perPage: 25){
 		notifications{
 ... on AiringNotification{type episode media{id title{native romaji english}}}
-... on FollowingNotification{type}
+... on FollowingNotification{type user{name}}
 ... on ActivityMessageNotification{
 	type user{name}
 	activityId
@@ -2377,6 +2377,9 @@ query{
 			}
 			else if(notification.type === "ACTIVITY_MENTION"){
 				create("span",false," mentioned you",noti)
+			}
+			else if(notification.type === "FOLLOWING"){
+				create("span",false," started following you",noti)
 			}
 			else if(notification.type === "AIRING"){
 				create("span",false,"Episode ",noti);
