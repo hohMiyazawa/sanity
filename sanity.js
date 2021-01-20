@@ -956,6 +956,11 @@ let formatActivity = function(activity,options){
 				create("span","status"," completed ",header);
 				media = create("span","ilink",activity.media.title.romaji,header)
 			}
+			else if(activity.status === "plans to read" || activity.status === "plans to watch"){
+				create("span","status"," " + activity.status + " ",header);
+				create("span","status",activity.progress,header);
+				media = create("span","ilink",activity.media.title.romaji,header)
+			}
 			else{
 				create("span","status"," " + activity.status + " ",header);
 				create("span","status",activity.progress,header);
@@ -2449,6 +2454,9 @@ query{
 					if(cacheItem){
 						create("span",false," [" + extractKeywords(cacheItem.activity.text)[0] + "]",noti)
 					}
+				}
+				activityLink.onclick = function(){
+					viewSingleActivity(notification.activity.id)
 				}
 			}
 			else if(notification.type === "ACTIVITY_MESSAGE"){
